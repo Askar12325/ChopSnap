@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A2B15" />
+      <stop offset="50%" stop-color="#1B2F21" />
+      <stop offset="100%" stop-color="#C75816" />
+    </linearGradient>
+    <radialGradient id="panGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#E8A355" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#4A2B15" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.5" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bgGrad)" />
+  <rect width="800" height="450" fill="url(#panGlow)" />
+
+  <!-- Skillet / Serving Bowl Silhouette Rim -->
+  <circle cx="400" cy="210" r="175" fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.1)" stroke-width="3" />
+  <circle cx="400" cy="210" r="150" fill="rgba(255,255,255,0.06)" stroke="#E8A355" stroke-opacity="0.4" stroke-width="1.5" stroke-dasharray="6 4" />
+
+  <!-- Stylized Culinary Accent Core -->
+  <g transform="translate(400, 210)">
+    <!-- Palm oil & broth shimmer -->
+    <ellipse cx="0" cy="0" rx="90" ry="70" fill="#E8A355" fill-opacity="0.22" />
+    <!-- Center Pot Icon -->
+    <circle cx="0" cy="-5" r="36" fill="#1F5C3A" stroke="#FFF8EF" stroke-width="2" />
+    <!-- Steaming Waves -->
+    <path d="M-12 -50 Q-8 -60 -12 -70" stroke="#FFF8EF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6" />
+    <path d="M0 -52 Q4 -64 0 -76" stroke="#FFF8EF" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8" />
+    <path d="M12 -50 Q16 -60 12 -70" stroke="#FFF8EF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6" />
+    <!-- Fork & Knife Emblem -->
+    <path d="M-10 -15 L-10 5 M-14 -15 L-6 -15 M-10 5 L-10 15" stroke="#FFF8EF" stroke-width="2" stroke-linecap="round" />
+    <path d="M10 -15 C6 -15 6 -5 10 -2 L10 15" stroke="#FFF8EF" stroke-width="2" stroke-linecap="round" fill="none" />
+  </g>
+
+  <!-- Top Badges -->
+  <g transform="translate(30, 30)">
+    <rect width="180" height="32" rx="16" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="20" y="21" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#E8A355">CHOPSNAP CUISINE</text>
+  </g>
+  <g transform="translate(620, 30)">
+    <rect width="150" height="32" rx="16" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="22" y="21" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFF8EF">10 Mins</text>
+  </g>
+
+  <!-- Title & Category Overlay -->
+  <g transform="translate(30, 270)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="1" fill="#E8A355" text-transform="uppercase">Quick Meal • Budget</text>
+    <text x="0" y="32" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#FFF8EF">Sizzled Honey Beans & Onion Mash</text>
+  </g>
+
+  <!-- Ingredient Tags Row -->
+  <g transform="translate(30, 340)"><rect width="210" height="34" rx="17" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" stroke-width="1" /><circle cx="20" cy="17" r="5" fill="#E8A355" /><text x="35" y="22" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#FFF8EF">Velvety Oloyin Beans</text></g><g transform="translate(260, 340)"><rect width="210" height="34" rx="17" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" stroke-width="1" /><circle cx="20" cy="17" r="5" fill="#E8A355" /><text x="35" y="22" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#FFF8EF">Caramelized Onions</text></g><g transform="translate(490, 340)"><rect width="210" height="34" rx="17" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" stroke-width="1" /><circle cx="20" cy="17" r="5" fill="#E8A355" /><text x="35" y="22" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#FFF8EF">Ata Rodo Sizzle</text></g>
+
+  <!-- Watermark / Custom Photo Tip -->
+  <text x="400" y="425" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="rgba(255,255,255,0.55)">
+    CHIC NIGERIAN RECIPE PREVIEW • REPLACE WITH CUSTOM PHOTO IN /public/dishes/honey_beans.svg
+  </text>
+</svg>

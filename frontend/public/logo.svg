@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 52" width="240" height="52" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&amp;display=swap');
+      .brand-chop {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-weight: 900;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+        fill: #1F5C3A;
+      }
+      .brand-snap {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-weight: 900;
+        font-size: 32px;
+        letter-spacing: -0.02em;
+        fill: #E8590C;
+      }
+      :root.dark .brand-chop {
+        fill: #4ADE80;
+      }
+      :root.dark .brand-snap {
+        fill: #FB923C;
+      }
+    </style>
+    <linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D7A50" />
+      <stop offset="100%" stop-color="#1F5C3A" />
+    </linearGradient>
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1" flood-opacity="0.12" />
+    </filter>
+  </defs>
+
+  <!-- Cooking Pot & Camera Aperture Icon (Left) -->
+  <g transform="translate(3, 4)" filter="url(#subtleShadow)">
+    <!-- Soft icon backdrop badge -->
+    <rect x="0" y="0" width="44" height="44" rx="12" fill="#1F5C3A" />
+    
+    <!-- Pot Body -->
+    <path d="M10 20 L11 31 C11.5 36.5 15.5 39 22 39 C28.5 39 32.5 36.5 33 31 L34 20 Z" fill="#FFFFFF" fill-opacity="0.95" />
+
+    <!-- Pot Side Handles -->
+    <path d="M7 23 C5 23 4.5 27 7 27" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" />
+    <path d="M37 23 C39 23 39.5 27 37 27" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" />
+
+    <!-- Pot Rim -->
+    <rect x="8" y="18" width="28" height="3.2" rx="1.6" fill="#FFFFFF" />
+
+    <!-- Domed Pot Lid -->
+    <path d="M10 18 C12 11 32 11 34 18 Z" fill="#E8590C" />
+
+    <!-- Lid Knob -->
+    <ellipse cx="22" cy="11" rx="4" ry="2" fill="#FFFFFF" />
+
+    <!-- Camera Aperture Mark on Lid -->
+    <circle cx="22" cy="15" r="3.2" fill="#1F5C3A" stroke="#FFFFFF" stroke-width="1.2" />
+    <circle cx="22" cy="15" r="1.2" fill="#E8590C" />
+  </g>
+
+  <!-- Wordmark "ChopSnap" -->
+  <text x="56" y="36">
+    <tspan class="brand-chop">Chop</tspan><tspan class="brand-snap">Snap</tspan>
+  </text>
+</svg>

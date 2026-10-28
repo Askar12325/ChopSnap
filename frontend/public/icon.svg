@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="potGradSq" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D7A50" />
+      <stop offset="100%" stop-color="#1F5C3A" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background tile for crisp presentation on all platforms -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#111F15" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+
+  <!-- Cooking Pot & Camera Aperture Icon -->
+  <g transform="translate(6, 6)">
+    <!-- Pot Side Handles -->
+    <path d="M7 27 C4 27 3.5 32 7 32" stroke="#3DA36E" stroke-width="3" stroke-linecap="round" fill="none" />
+    <path d="M45 27 C48 27 48.5 32 45 32" stroke="#3DA36E" stroke-width="3" stroke-linecap="round" fill="none" />
+
+    <!-- Pot Body -->
+    <path d="M10 24 L11.5 36 C12.5 42.5 17 46 26 46 C35 46 39.5 42.5 40.5 36 L42 24 Z" fill="url(#potGradSq)" stroke="#3DA36E" stroke-width="1.6" />
+
+    <!-- Pot Rim -->
+    <rect x="8" y="22" width="36" height="4" rx="2" fill="#2E7D52" stroke="#3DA36E" stroke-width="1" />
+
+    <!-- Domed Pot Lid -->
+    <path d="M11 22 C13 14 39 14 41 22 Z" fill="#1F5C3A" stroke="#3DA36E" stroke-width="1.4" />
+
+    <!-- Lid Knob -->
+    <ellipse cx="26" cy="14" rx="4.5" ry="2.4" fill="#E8590C" />
+
+    <!-- Camera Aperture Mark on Lid -->
+    <circle cx="26" cy="18.5" r="4.8" fill="#0C1710" stroke="#E8590C" stroke-width="1.6" />
+    <circle cx="26" cy="18.5" r="1.8" fill="#E8590C" />
+    <!-- Aperture Blades -->
+    <line x1="24" y1="16" x2="25.8" y2="17.2" stroke="#FFA466" stroke-width="1" stroke-linecap="round" />
+    <line x1="28" y1="16.2" x2="27.4" y2="18" stroke="#FFA466" stroke-width="1" stroke-linecap="round" />
+    <line x1="28.6" y1="19.3" x2="27" y2="19.9" stroke="#FFA466" stroke-width="1" stroke-linecap="round" />
+    <line x1="24.8" y1="20.8" x2="24.4" y2="19" stroke="#FFA466" stroke-width="1" stroke-linecap="round" />
+    <line x1="23.2" y1="18.2" x2="24.8" y2="17.8" stroke="#FFA466" stroke-width="1" stroke-linecap="round" />
+  </g>
+</svg>
