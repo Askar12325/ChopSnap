@@ -97,6 +97,8 @@ interface VoiceInterpretation {
   add_ingredients: string[];
   remove_ingredients: string[];
   language_detected: string | null;
+  source?: "model" | "fallback" | string;
+  confidence?: "high" | "unclear" | string;
 }
 
 interface PreviousVoiceState {
@@ -1163,10 +1165,25 @@ export default function Home() {
         });
       }
 
+      // Handle unclear interpretation: ask user to clarify rather than guessing
+      if (interp.confidence === "unclear" && changeSummaries.length === 0) {
+        setVoiceMessage("We could not clearly understand your instructions. Please edit or rephrase them in the text box.");
+        setVoiceAppliedChanges(null);
+        return;
+      }
+
       if (changeSummaries.length > 0) {
-        setVoiceAppliedChanges(changeSummaries.join(" • "));
+        let summaryText = changeSummaries.join(" • ");
+        if (interp.source === "fallback") {
+          summaryText = `Basic understanding used • ${summaryText}`;
+        }
+        setVoiceAppliedChanges(summaryText);
       } else {
-        setVoiceAppliedChanges("Preferences understood, ready to cook.");
+        setVoiceAppliedChanges(
+          interp.source === "fallback"
+            ? "Basic understanding used • Preferences ready to cook."
+            : "Preferences understood, ready to cook."
+        );
       }
     } catch {
       setVoiceMessage("Could not connect to the voice interpreter. You can still set preferences and ingredients manually.");

@@ -176,6 +176,8 @@ For judges and developers evaluating the application without spinning up a local
 ChopSnap includes zero-cost **Snap + Speak** voice input powered by the Web Speech API (`webkitSpeechRecognition`):
 - **Languages supported**: English (`en-NG`), Nigerian Pidgin (`en-NG`), Yorùbá (`yo-NG` [Beta]), Hausa (`ha-NG` [Beta]), and Igbo (`ig-NG` [Beta]).
 - **Editable Transcript**: The transcribed voice command appears in an editable text box before being submitted, allowing immediate corrections for local food words.
+- **Model vs. Fallback Notice**: The interpretation engine sends spoken transcripts to the live reasoning model (`meta-models/muse-spark-open-1026`). If the model endpoint is unreachable or times out, a local heuristic extractor runs automatically and informs the user with a `"Basic understanding used"` indicator in the changes banner.
+- **Unclear Input Handling**: If the spoken command is garbled or no culinary parameters can be recognized, the system will never guess or invent parameters—it prompts the user to edit or rephrase the instruction.
 - **Privacy & Compatibility Note**: Browser speech recognition (`SpeechRecognition` / `webkitSpeechRecognition`) may process audio on browser vendor speech servers (e.g. Google's speech recognition backend in Chromium). It works best on modern desktop or mobile versions of **Google Chrome** and **Microsoft Edge**. If speech recognition is unsupported or permissions are denied, ChopSnap gracefully displays a direct text input field so you are never blocked.
 
 ---

@@ -847,6 +847,8 @@ class RecipeService:
                             cleaned = match.group(1)
                     parsed = json.loads(cleaned)
                     if isinstance(parsed, dict):
+                        parsed["source"] = "model"
+                        parsed["confidence"] = "high"
                         return parsed
             except Exception as e:
                 logger.warning(f"Live voice interpretation failed ({type(e).__name__}: {e}), utilizing resilient parser.")
@@ -861,7 +863,9 @@ class RecipeService:
             "cooking_fuel": None,
             "add_ingredients": [],
             "remove_ingredients": [],
-            "language_detected": "English"
+            "language_detected": "English",
+            "source": "fallback",
+            "confidence": "high"
         }
 
         # Budget extraction: e.g. ₦3000, 3000 naira, 3k
@@ -934,6 +938,19 @@ class RecipeService:
             extracted["language_detected"] = "Igbo"
         else:
             extracted["language_detected"] = "Nigerian English"
+
+        # If fallback could not extract any meaningful fields, mark confidence as unclear
+        has_any_field = any([
+            extracted["budget_naira"] is not None,
+            extracted["servings"] is not None,
+            len(extracted["dietary"]) > 0,
+            extracted["spice_level"] is not None,
+            extracted["cooking_fuel"] is not None,
+            len(extracted["add_ingredients"]) > 0,
+            len(extracted["remove_ingredients"]) > 0,
+        ])
+        if not has_any_field:
+            extracted["confidence"] = "unclear"
 
         return extracted
 

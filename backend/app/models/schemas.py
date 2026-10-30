@@ -276,6 +276,8 @@ class VoiceInterpretResponse(BaseModel):
     add_ingredients: List[str] = Field(default_factory=list, description="Specific ingredients user wants added/included")
     remove_ingredients: List[str] = Field(default_factory=list, description="Specific ingredients user wants excluded/removed")
     language_detected: Optional[str] = Field(default=None, description="Detected language: English, Nigerian Pidgin, Yoruba, Hausa, Igbo, etc.")
+    source: Optional[str] = Field(default="model", description="'model' if parsed by Meta LLM, 'fallback' if rule-based fallback ran")
+    confidence: Optional[str] = Field(default="high", description="'high' if clear parameters found, 'unclear' if input was ambiguous")
 
     @model_validator(mode="before")
     @classmethod
