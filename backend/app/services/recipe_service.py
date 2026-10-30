@@ -784,6 +784,159 @@ class RecipeService:
         recipes, shopping_list = RECIPE_COLLECTIONS[collection_idx]
         return recipes, shopping_list
 
+    async def interpret_voice_instruction(self, transcript: str, language: str = "en-NG") -> dict:
+        """
+        Interprets spoken user instructions into structured parameters for ChopSnap:
+        budget_naira, servings, dietary, spice_level, cooking_fuel, add_ingredients, remove_ingredients, language_detected.
+        Explicitly handles Nigerian English, Nigerian Pidgin, Yoruba, Hausa, and Igbo.
+        """
+        system_prompt = (
+            "You are an expert Nigerian culinary voice assistant for the ChopSnap app. "
+            "Your task is to analyze user spoken instructions and extract structured cooking and budget preferences. "
+            "The user input may be spoken in Nigerian English, Nigerian Pidgin (e.g., 'abeg make food for 4 people no put pork', 'make am sharp hot', 'I get 3000 naira'), "
+            "Yoruba (e.g., 'e se ounjẹ fun eniyan mẹrin', 'ma fi ẹlẹdẹ si'), "
+            "Hausa (e.g., 'abinci na mutane hudu', 'ba alade ba'), "
+            "or Igbo (e.g., 'nri maka mmadụ anọ', 'etinyeghị anụ ezi').\n\n"
+            "Return ONLY a valid JSON object with EXACTLY these keys:\n"
+            "{\n"
+            '  "budget_naira": integer or null,\n'
+            '  "servings": integer or null,\n'
+            '  "dietary": [string, ...] (only explicit dietary restrictions like "no pork", "halal", "no fish", "vegetarian", else empty array),\n'
+            '  "spice_level": "Mild" | "Authentic Hot" | "Suya Extra" | null,\n'
+            '  "cooking_fuel": "gas" | "charcoal" | "electric" | "kerosene" | null,\n'
+            '  "add_ingredients": [string, ...] (ingredients mentioned to add, else empty array),\n'
+            '  "remove_ingredients": [string, ...] (ingredients mentioned to avoid/remove, else empty array),\n'
+            '  "language_detected": string (e.g. "Nigerian English", "Nigerian Pidgin", "Yoruba", "Hausa", "Igbo")\n'
+            "}\n\n"
+            "CRITICAL RULES:\n"
+            "1. Missing or unmentioned fields MUST be null (for budget_naira, servings, spice_level, cooking_fuel) or empty list [] (for dietary, add_ingredients, remove_ingredients). NEVER GUESS.\n"
+            "2. For budget, extract the numeric value in Naira (e.g. '3k', '3000 naira', 'three thousand' -> 3000).\n"
+            "3. For servings, extract the portion count (e.g. 'for me and my wife' -> 2, 'four people' -> 4, 'eniyan meta' -> 3).\n"
+            "4. Return ONLY valid JSON, with no markdown code blocks and no preamble."
+        )
+
+        user_content = f"Spoken Transcript ({language}): \"{transcript}\""
+
+        # Attempt live model call
+        if settings.INFERENCE_MODE != "mock":
+            try:
+                url = f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/chat/completions"
+                payload = {
+                    "model": settings.MUSE_GLIMMER_MODEL_NAME,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content}
+                    ],
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"}
+                }
+                headers = {}
+                if settings.MUSE_GLIMMER_API_KEY:
+                    headers["Authorization"] = f"Bearer {settings.MUSE_GLIMMER_API_KEY}"
+
+                async with httpx.AsyncClient(timeout=settings.MUSE_GLIMMER_TIMEOUT_SECONDS) as client:
+                    res = await client.post(url, json=payload, headers=headers)
+                    res.raise_for_status()
+                    data = res.json()
+                    raw_content = data["choices"][0]["message"]["content"]
+                    
+                    cleaned = raw_content.strip()
+                    if cleaned.startswith("```"):
+                        match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", cleaned)
+                        if match:
+                            cleaned = match.group(1)
+                    parsed = json.loads(cleaned)
+                    if isinstance(parsed, dict):
+                        return parsed
+            except Exception as e:
+                logger.warning(f"Live voice interpretation failed ({type(e).__name__}: {e}), utilizing resilient parser.")
+
+        # Resilient fallback parser for offline/demo/rule-based processing
+        lower_t = transcript.lower()
+        extracted: dict = {
+            "budget_naira": None,
+            "servings": None,
+            "dietary": [],
+            "spice_level": None,
+            "cooking_fuel": None,
+            "add_ingredients": [],
+            "remove_ingredients": [],
+            "language_detected": "English"
+        }
+
+        # Budget extraction: e.g. ₦3000, 3000 naira, 3k
+        budget_match = re.search(r"(?:₦|naira\s*)?(\d+(?:,\d+)?)\s*(?:k\b|naira|\b)", lower_t)
+        if "3k" in lower_t:
+            extracted["budget_naira"] = 3000
+        elif "2k" in lower_t:
+            extracted["budget_naira"] = 2000
+        elif "5k" in lower_t:
+            extracted["budget_naira"] = 5000
+        elif "10k" in lower_t:
+            extracted["budget_naira"] = 10000
+        elif budget_match and any(kw in lower_t for kw in ("naira", "budget", "spend", "cost", "₦")):
+            try:
+                num_str = budget_match.group(1).replace(",", "")
+                extracted["budget_naira"] = int(num_str)
+            except ValueError:
+                pass
+
+        # Servings extraction
+        serv_match = re.search(r"(\d+)\s*(?:people|persons|servings|heads|mouths|eniyan|mutane|mmadụ)", lower_t)
+        if serv_match:
+            try:
+                extracted["servings"] = int(serv_match.group(1))
+            except ValueError:
+                pass
+        elif "just me" in lower_t or "myself" in lower_t or "single" in lower_t:
+            extracted["servings"] = 1
+        elif "me and my wife" in lower_t or "two of us" in lower_t:
+            extracted["servings"] = 2
+        elif "family of 4" in lower_t or "four of us" in lower_t:
+            extracted["servings"] = 4
+
+        # Dietary
+        if "no pork" in lower_t or "without pork" in lower_t or "ẹlẹdẹ" in lower_t or "alade" in lower_t:
+            extracted["dietary"].append("no pork")
+        if "halal" in lower_t:
+            extracted["dietary"].append("halal")
+        if "no fish" in lower_t or "without fish" in lower_t or "allergic to fish" in lower_t:
+            extracted["dietary"].append("no fish")
+        if "vegetarian" in lower_t or "no meat" in lower_t:
+            extracted["dietary"].append("vegetarian")
+
+        # Spice
+        if any(w in lower_t for w in ("mild", "not pepper", "no too much pepper", "small pepper", "little pepper")):
+            extracted["spice_level"] = "Mild"
+        elif any(w in lower_t for w in ("suya extra", "very hot", "plenty pepper", "die hot", "extra hot")):
+            extracted["spice_level"] = "Suya Extra"
+        elif any(w in lower_t for w in ("hot", "authentic hot", "normal pepper", "sweet pepper")):
+            extracted["spice_level"] = "Authentic Hot"
+
+        # Fuel
+        if "charcoal" in lower_t or "coal" in lower_t:
+            extracted["cooking_fuel"] = "charcoal"
+        elif "gas" in lower_t:
+            extracted["cooking_fuel"] = "gas"
+        elif "electric" in lower_t or "hotplate" in lower_t:
+            extracted["cooking_fuel"] = "electric"
+        elif "kerosene" in lower_t or "stove" in lower_t:
+            extracted["cooking_fuel"] = "kerosene"
+
+        # Language detection heuristic
+        if any(w in lower_t for w in ("abeg", "dey", "wetin", "no put", "sharp sharp", "fit", "chop", "na")):
+            extracted["language_detected"] = "Nigerian Pidgin"
+        elif any(w in lower_t for w in ("e se", "ounje", "eniyan", "eledẹ", "ata", "bawo")):
+            extracted["language_detected"] = "Yoruba"
+        elif any(w in lower_t for w in ("abinci", "mutane", "alade", "sannu", "ina")):
+            extracted["language_detected"] = "Hausa"
+        elif any(w in lower_t for w in ("nri", "mmadu", "anu ezi", "kedu", "biko")):
+            extracted["language_detected"] = "Igbo"
+        else:
+            extracted["language_detected"] = "Nigerian English"
+
+        return extracted
+
     def _mock_recipes_for_sample(
         self, sample_type: str = None, detected_items: List[DetectedItem] = None
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:

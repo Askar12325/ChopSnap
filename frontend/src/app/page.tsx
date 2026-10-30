@@ -34,6 +34,10 @@ import {
   RotateCcw,
   Plus,
   Tag,
+  Mic,
+  MicOff,
+  Volume2,
+  Undo2,
 } from "lucide-react";
 
 interface DetectedItem {
@@ -82,6 +86,25 @@ interface ProcessResponse {
     vision_engine?: string;
     recipe_engine?: string;
   };
+}
+
+interface VoiceInterpretation {
+  budget_naira: number | null;
+  servings: number | null;
+  dietary: string[];
+  spice_level: "Mild" | "Authentic Hot" | "Suya Extra" | null;
+  cooking_fuel: "gas" | "charcoal" | "electric" | "kerosene" | null;
+  add_ingredients: string[];
+  remove_ingredients: string[];
+  language_detected: string | null;
+}
+
+interface PreviousVoiceState {
+  householdSize: number;
+  spiceLevel: "Mild" | "Authentic Hot" | "Suya Extra";
+  cookingFuel: "gas" | "charcoal" | "electric" | "kerosene";
+  tierFilter: "all" | "budget" | "comfortable";
+  detectedItems: DetectedItem[];
 }
 
 // Map dish title to local SVG in /public/dishes/ with fallback
@@ -866,6 +889,23 @@ export default function Home() {
   const [showPreferences, setShowPreferences] = useState(false);
   const [showOpenWeightModal, setShowOpenWeightModal] = useState(false);
 
+  // =========================================================================
+  // Snap + Speak Voice Intelligence State
+  // =========================================================================
+  const [voiceSupported, setVoiceSupported] = useState<boolean>(true);
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [voiceLang, setVoiceLang] = useState<string>("en-NG");
+  const [voiceTranscript, setVoiceTranscript] = useState<string>("");
+  const [voiceInterpreting, setVoiceInterpreting] = useState<boolean>(false);
+  const [voiceMessage, setVoiceMessage] = useState<string | null>(null);
+  const [voiceAppliedChanges, setVoiceAppliedChanges] = useState<string | null>(null);
+  const [previousVoiceState, setPreviousVoiceState] = useState<PreviousVoiceState | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Theme state: defaults to light (#FFF8EF)
   const [isDark, setIsDark] = useState(false);
 
@@ -873,6 +913,14 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const isDarkMode = document.documentElement.classList.contains("dark");
       setIsDark(isDarkMode);
+
+      // Check SpeechRecognition / webkitSpeechRecognition support
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const win = window as any;
+      const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        setVoiceSupported(false);
+      }
     }
   }, []);
 
@@ -912,6 +960,238 @@ export default function Home() {
         }
       }, 150);
     }
+  };
+
+  // =========================================================================
+  // Snap + Speak Voice Intelligence Handlers
+  // =========================================================================
+  const stopVoiceRecognition = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsListening(false);
+    setRecordingSeconds(0);
+  };
+
+  const startVoiceRecognition = () => {
+    if (isListening) {
+      stopVoiceRecognition();
+      return;
+    }
+
+    setVoiceMessage(null);
+    setVoiceAppliedChanges(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceSupported(false);
+      setVoiceMessage("Speech recognition is not supported in this browser. Please type your instructions below.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = voiceLang;
+      recognition.interimResults = true;
+      recognition.continuous = true;
+      recognition.maxAlternatives = 1;
+
+      let finalSoFar = voiceTranscript ? voiceTranscript + " " : "";
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalSoFar += event.results[i][0].transcript + " ";
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        const full = (finalSoFar + interim).trim();
+        setVoiceTranscript(full);
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onerror = (event: any) => {
+        stopVoiceRecognition();
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setVoiceMessage("Microphone permission was denied. Please allow microphone access in your browser or type below.");
+        } else if (event.error === "no-speech") {
+          setVoiceMessage("No speech was detected. Please tap the mic and speak clearly.");
+        } else if (event.error === "network") {
+          setVoiceMessage("Network error during speech recognition. Check your connection or type below.");
+        } else {
+          setVoiceMessage(`Voice recognition error: ${event.error}. You can edit or type instructions directly.`);
+        }
+      };
+
+      recognition.onend = () => {
+        stopVoiceRecognition();
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsListening(true);
+      setRecordingSeconds(0);
+
+      // Enforce 30-second maximum
+      const startTime = Date.now();
+      recordingTimerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setRecordingSeconds(elapsed);
+        if (elapsed >= 30) {
+          stopVoiceRecognition();
+        }
+      }, 500);
+
+    } catch (e: unknown) {
+      stopVoiceRecognition();
+      setVoiceMessage(`Could not initialize microphone: ${e instanceof Error ? e.message : "Permission issue"}. Type below.`);
+    }
+  };
+
+  const handleInterpretVoice = async () => {
+    if (!voiceTranscript.trim()) {
+      setVoiceMessage("Please say or type what you would like to cook, portions, or dietary needs first.");
+      return;
+    }
+
+    setVoiceInterpreting(true);
+    setVoiceMessage(null);
+
+    // Save previous state to allow 1-click Undo
+    setPreviousVoiceState({
+      householdSize,
+      spiceLevel,
+      cookingFuel,
+      tierFilter,
+      detectedItems: data?.detected_items ? [...data.detected_items] : [],
+    });
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/api/voice/interpret`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: voiceTranscript.trim(),
+          language: voiceLang,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      const interp: VoiceInterpretation = await res.json();
+      const changeSummaries: string[] = [];
+
+      // 1. Budget
+      if (interp.budget_naira) {
+        if (interp.budget_naira <= 1500) {
+          setTierFilter("budget");
+          changeSummaries.push(`Budget ₦${interp.budget_naira.toLocaleString()} (Everyday Budget)`);
+        } else {
+          setTierFilter("comfortable");
+          changeSummaries.push(`Budget ₦${interp.budget_naira.toLocaleString()} (Comfortable)`);
+        }
+      }
+
+      // 2. Servings
+      if (interp.servings && interp.servings >= 1 && interp.servings <= 6) {
+        setHouseholdSize(interp.servings);
+        changeSummaries.push(`${interp.servings} ${interp.servings === 1 ? "person" : "people"}`);
+      }
+
+      // 3. Dietary
+      if (interp.dietary && interp.dietary.length > 0) {
+        changeSummaries.push(interp.dietary.join(", "));
+      }
+
+      // 4. Spice Level
+      if (interp.spice_level) {
+        setSpiceLevel(interp.spice_level);
+        changeSummaries.push(`${interp.spice_level} spice`);
+      }
+
+      // 5. Fuel
+      if (interp.cooking_fuel) {
+        setCookingFuel(interp.cooking_fuel);
+        changeSummaries.push(`${interp.cooking_fuel} stove`);
+      }
+
+      // 6. Ingredients additions/removals if data exists
+      if (data) {
+        let currentItems = [...data.detected_items];
+
+        if (interp.remove_ingredients && interp.remove_ingredients.length > 0) {
+          const toRemove = interp.remove_ingredients.map((r) => r.toLowerCase());
+          currentItems = currentItems.filter(
+            (item) => !toRemove.some((rem) => item.name.toLowerCase().includes(rem) || rem.includes(item.name.toLowerCase()))
+          );
+          changeSummaries.push(`Excluded: ${interp.remove_ingredients.join(", ")}`);
+        }
+
+        if (interp.add_ingredients && interp.add_ingredients.length > 0) {
+          for (const addName of interp.add_ingredients) {
+            if (!currentItems.some((ci) => ci.name.toLowerCase() === addName.toLowerCase())) {
+              currentItems.push({
+                name: addName.trim(),
+                category: "Produce",
+                confidence: 1.0,
+                estimated_quantity: "Added via voice",
+              });
+            }
+          }
+          changeSummaries.push(`Added: ${interp.add_ingredients.join(", ")}`);
+        }
+
+        setData({
+          ...data,
+          detected_items: currentItems,
+        });
+      }
+
+      if (changeSummaries.length > 0) {
+        setVoiceAppliedChanges(changeSummaries.join(" • "));
+      } else {
+        setVoiceAppliedChanges("Preferences understood, ready to cook.");
+      }
+    } catch {
+      setVoiceMessage("Could not connect to the voice interpreter. You can still set preferences and ingredients manually.");
+    } finally {
+      setVoiceInterpreting(false);
+    }
+  };
+
+  const handleUndoVoice = () => {
+    if (!previousVoiceState) return;
+    setHouseholdSize(previousVoiceState.householdSize);
+    setSpiceLevel(previousVoiceState.spiceLevel);
+    setCookingFuel(previousVoiceState.cookingFuel);
+    setTierFilter(previousVoiceState.tierFilter);
+
+    if (data && previousVoiceState.detectedItems) {
+      setData({
+        ...data,
+        detected_items: previousVoiceState.detectedItems,
+      });
+    }
+
+    setPreviousVoiceState(null);
+    setVoiceAppliedChanges(null);
+    setVoiceMessage("Voice changes undone.");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1466,22 +1746,176 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               />
 
               {!previewUrl ? (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="group border-2 border-dashed border-[var(--border-default)] hover:border-[#1F5C3A] dark:hover:border-[#287A4D] rounded-2xl p-4 sm:p-6 text-center cursor-pointer transition-all duration-200 bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)]"
-                >
-                  <div className="w-12 h-12 mx-auto mb-2.5 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary-border)] flex items-center justify-center text-[var(--primary-text)] group-hover:scale-105 transition-transform duration-200 shadow-sm">
-                    <Camera className="w-6 h-6 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                    {/* Snap Button / Area (3 cols) */}
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="sm:col-span-3 group border-2 border-dashed border-[var(--border-default)] hover:border-[#1F5C3A] dark:hover:border-[#287A4D] rounded-2xl p-4 text-center cursor-pointer transition-all duration-200 bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] flex flex-col items-center justify-center min-h-[140px]"
+                    >
+                      <div className="w-11 h-11 mx-auto mb-2 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary-border)] flex items-center justify-center text-[var(--primary-text)] group-hover:scale-105 transition-transform duration-200 shadow-sm">
+                        <Camera className="w-5 h-5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)] mb-0.5">
+                        Snap fridge, shelf, or counter
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                        Tap photo or drag & drop here
+                      </p>
+                    </div>
+
+                    {/* Speak Mic Action Box (1 col) */}
+                    <div className="sm:col-span-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 flex flex-col items-center justify-between text-center relative overflow-hidden min-h-[140px]">
+                      <div className="w-full flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                          Speak
+                        </span>
+                        {isListening && (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500 animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            {recordingSeconds}s
+                          </span>
+                        )}
+                      </div>
+
+                      {voiceSupported ? (
+                        <button
+                          type="button"
+                          onClick={startVoiceRecognition}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-md cursor-pointer active:scale-90 ${
+                            isListening
+                              ? "bg-rose-600 hover:bg-rose-700 text-white animate-bounce shadow-rose-600/30 ring-4 ring-rose-500/20"
+                              : "bg-[#1F5C3A] hover:bg-[#17472D] text-white shadow-[#1F5C3A]/25 hover:scale-105"
+                          }`}
+                          title={isListening ? "Press to stop recording" : "Press to start speaking instructions"}
+                          aria-label={isListening ? "Stop listening" : "Start voice input"}
+                        >
+                          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                        </button>
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
+                          <Volume2 className="w-5 h-5" />
+                        </div>
+                      )}
+
+                      <p className="text-[11px] font-medium text-[var(--text-secondary)] leading-tight">
+                        {isListening ? "Listening (tap stop)" : voiceSupported ? "Tap to speak" : "Type below"}
+                      </p>
+                    </div>
                   </div>
 
-                  <p className="text-sm sm:text-base font-semibold text-[var(--text-primary)] mb-0.5">
-                    Snap fridge, shelf, or kitchen counter
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                    Tap to take a photo or select an image from your gallery
-                  </p>
+                  {/* Language Selector + Voice Guidance */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-[var(--text-muted)]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-medium">Voice Language:</span>
+                      <select
+                        value={voiceLang}
+                        onChange={(e) => setVoiceLang(e.target.value)}
+                        disabled={isListening}
+                        className="text-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-lg px-2 py-1 outline-none cursor-pointer focus:border-[#1F5C3A]"
+                      >
+                        <option value="en-NG">English (en-NG)</option>
+                        <option value="en-NG">Nigerian Pidgin (en-NG)</option>
+                        <option value="yo-NG">Yorùbá (yo-NG) [Beta]</option>
+                        <option value="ha-NG">Hausa (ha-NG) [Beta]</option>
+                        <option value="ig-NG">Igbo (ig-NG) [Beta]</option>
+                      </select>
+                      {(voiceLang === "yo-NG" || voiceLang === "ha-NG" || voiceLang === "ig-NG") && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#E8590C]/15 text-[#E8590C] border border-[#E8590C]/25">
+                          BETA
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[var(--text-muted)] hidden sm:inline">
+                      30s max • Editable before send
+                    </span>
+                  </div>
+
+                  {/* Editable Transcript Text Box */}
+                  {(voiceTranscript || !voiceSupported || isListening) && (
+                    <div className="p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                          <Volume2 className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                          Spoken / Typed Instructions
+                        </label>
+                        {voiceTranscript && (
+                          <button
+                            type="button"
+                            onClick={() => setVoiceTranscript("")}
+                            className="text-[10px] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      <textarea
+                        value={voiceTranscript}
+                        onChange={(e) => setVoiceTranscript(e.target.value)}
+                        placeholder="e.g. 'Abeg make food for 4 people no put pork, budget na 3000 naira, mild pepper'"
+                        rows={2}
+                        className="w-full text-xs sm:text-sm p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#1F5C3A] resize-none"
+                      />
+
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <span className="text-[10px] text-[var(--text-muted)]">
+                          Edit text freely, then apply to settings.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleInterpretVoice}
+                          disabled={voiceInterpreting || !voiceTranscript.trim()}
+                          className={`min-h-[30px] px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            voiceInterpreting || !voiceTranscript.trim()
+                              ? "bg-[var(--bg-surface)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-subtle)]"
+                              : "bg-[#1F5C3A] hover:bg-[#17472D] text-white shadow-sm active:scale-95"
+                          }`}
+                        >
+                          {voiceInterpreting ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              <span>Interpreting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3 text-[#E8590C]" />
+                              <span>Apply to Plan</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Feedback / Error / Changes Banner */}
+                  {voiceMessage && (
+                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{voiceMessage}</span>
+                    </div>
+                  )}
+
+                  {voiceAppliedChanges && (
+                    <div className="p-2.5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs flex items-center justify-between gap-2 shadow-sm">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                        <span className="truncate font-medium">{voiceAppliedChanges}</span>
+                      </div>
+                      {previousVoiceState && (
+                        <button
+                          type="button"
+                          onClick={handleUndoVoice}
+                          className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[#D94F04] text-[var(--text-primary)] hover:text-[#D94F04] font-semibold text-[11px] shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                        >
+                          <Undo2 className="w-3 h-3" />
+                          <span>Undo</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1497,15 +1931,88 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       <span className="truncate max-w-[190px] font-medium opacity-95">
                         {selectedFile?.name || "kitchen_snapshot.jpg"}
                       </span>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        type="button"
-                        className="min-h-[32px] px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 border border-white/20 text-xs text-white backdrop-blur-sm transition-colors active:scale-95 shrink-0 cursor-pointer"
-                      >
-                        Change
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {voiceSupported && (
+                          <button
+                            onClick={startVoiceRecognition}
+                            type="button"
+                            className={`min-h-[32px] px-2.5 py-1 rounded-lg border text-xs text-white backdrop-blur-sm transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
+                              isListening
+                                ? "bg-rose-600 border-rose-400 animate-pulse ring-2 ring-rose-400/40"
+                                : "bg-black/60 hover:bg-black/80 border-white/20"
+                            }`}
+                            title="Speak instruction"
+                          >
+                            <Mic className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{isListening ? `${recordingSeconds}s` : "Speak"}</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          type="button"
+                          className="min-h-[32px] px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 border border-white/20 text-xs text-white backdrop-blur-sm transition-colors active:scale-95 cursor-pointer"
+                        >
+                          Change
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Transcript box when photo preview is present */}
+                  {(voiceTranscript || isListening) && (
+                    <div className="p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                          <Volume2 className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                          Spoken Instructions
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setVoiceTranscript("")}
+                          className="text-[10px] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <textarea
+                        value={voiceTranscript}
+                        onChange={(e) => setVoiceTranscript(e.target.value)}
+                        placeholder="e.g. 'Make food for 4 people no put pork, budget na 3000 naira'"
+                        rows={2}
+                        className="w-full text-xs p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#1F5C3A] resize-none"
+                      />
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={handleInterpretVoice}
+                          disabled={voiceInterpreting || !voiceTranscript.trim()}
+                          className="min-h-[28px] px-3 py-1 rounded-lg text-xs font-semibold bg-[#1F5C3A] hover:bg-[#17472D] text-white flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                        >
+                          {voiceInterpreting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-[#E8590C]" />}
+                          <span>Apply to Plan</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {voiceAppliedChanges && (
+                    <div className="p-2.5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs flex items-center justify-between gap-2 shadow-sm">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                        <span className="truncate font-medium">{voiceAppliedChanges}</span>
+                      </div>
+                      {previousVoiceState && (
+                        <button
+                          type="button"
+                          onClick={handleUndoVoice}
+                          className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[#D94F04] text-[var(--text-primary)] hover:text-[#D94F04] font-semibold text-[11px] shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                        >
+                          <Undo2 className="w-3 h-3" />
+                          <span>Undo</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

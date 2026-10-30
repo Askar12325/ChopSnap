@@ -171,6 +171,15 @@ For judges and developers evaluating the application without spinning up a local
 
 ---
 
+## 🎙️ Snap + Speak (Voice Intelligence)
+
+ChopSnap includes zero-cost **Snap + Speak** voice input powered by the Web Speech API (`webkitSpeechRecognition`):
+- **Languages supported**: English (`en-NG`), Nigerian Pidgin (`en-NG`), Yorùbá (`yo-NG` [Beta]), Hausa (`ha-NG` [Beta]), and Igbo (`ig-NG` [Beta]).
+- **Editable Transcript**: The transcribed voice command appears in an editable text box before being submitted, allowing immediate corrections for local food words.
+- **Privacy & Compatibility Note**: Browser speech recognition (`SpeechRecognition` / `webkitSpeechRecognition`) may process audio on browser vendor speech servers (e.g. Google's speech recognition backend in Chromium). It works best on modern desktop or mobile versions of **Google Chrome** and **Microsoft Edge**. If speech recognition is unsupported or permissions are denied, ChopSnap gracefully displays a direct text input field so you are never blocked.
+
+---
+
 ## 🔮 Future Improvements
 
 1. **Baseten & Dedicated Inference Hosting**: Deploy quantized Meta Muse Glimmer 30B and Muse Spark Open on cloud serverless infrastructure (Baseten / vLLM) for high-concurrency production serving.

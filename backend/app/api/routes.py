@@ -3,7 +3,7 @@ import httpx
 from typing import Optional
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
 from ..config import settings
-from ..models.schemas import ProcessResponse, UpdateRecipesRequest
+from ..models.schemas import ProcessResponse, UpdateRecipesRequest, VoiceInterpretRequest, VoiceInterpretResponse
 from ..services.vision_service import VisionService
 from ..services.recipe_service import RecipeService
 
@@ -270,5 +270,43 @@ async def update_recipes(payload: UpdateRecipesRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Recipe update failed: {str(e)}",
+        )
+
+@router.post("/voice/interpret", response_model=VoiceInterpretResponse, tags=["Voice Intelligence"])
+async def interpret_voice(payload: VoiceInterpretRequest):
+    """
+    Interprets user spoken transcript via RECIPE_MODEL into structured culinary & budget parameters:
+    - budget_naira
+    - servings
+    - dietary (e.g. no pork, halal, no fish)
+    - spice_level (Mild, Authentic Hot, Suya Extra)
+    - cooking_fuel (gas, charcoal, electric, kerosene)
+    - add_ingredients
+    - remove_ingredients
+    - language_detected
+    Explicitly supports Nigerian English, Nigerian Pidgin, Yoruba, Hausa, and Igbo.
+    Missing fields are returned as null/empty list, never guessed.
+    """
+    clean_text = payload.transcript.strip()
+    if not clean_text:
+        return VoiceInterpretResponse(
+            budget_naira=None,
+            servings=None,
+            dietary=[],
+            spice_level=None,
+            cooking_fuel=None,
+            add_ingredients=[],
+            remove_ingredients=[],
+            language_detected="Unknown"
+        )
+
+    try:
+        raw_result = await recipe_service.interpret_voice_instruction(clean_text, language=payload.language or "en-NG")
+        return VoiceInterpretResponse(**raw_result)
+    except Exception as e:
+        logger.exception("Voice interpretation error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Voice interpretation failed: {str(e)}"
         )
 

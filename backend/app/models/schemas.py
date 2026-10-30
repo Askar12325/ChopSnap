@@ -263,4 +263,88 @@ class UpdateRecipesRequest(BaseModel):
     spice_level: Optional[str] = Field(default="Mild", description="Spice preference: Mild, Authentic Hot, Suya Extra")
     cooking_fuel: Optional[str] = Field(default="gas", description="Cooking fuel: gas, charcoal, electric, kerosene")
 
+class VoiceInterpretRequest(BaseModel):
+    transcript: str = Field(..., description="User voice transcript or spoken instruction")
+    language: Optional[str] = Field(default="en-NG", description="Spoken language locale code")
+
+class VoiceInterpretResponse(BaseModel):
+    budget_naira: Optional[int] = Field(default=None, description="Budget in Naira if specified, else None")
+    servings: Optional[int] = Field(default=None, description="Number of household portions/servings, else None")
+    dietary: List[str] = Field(default_factory=list, description="Dietary restrictions explicitly requested (e.g., 'no pork', 'halal', 'no fish', 'vegetarian')")
+    spice_level: Optional[str] = Field(default=None, description="'Mild', 'Authentic Hot', or 'Suya Extra' if specified, else None")
+    cooking_fuel: Optional[str] = Field(default=None, description="'gas', 'charcoal', 'electric', or 'kerosene' if specified, else None")
+    add_ingredients: List[str] = Field(default_factory=list, description="Specific ingredients user wants added/included")
+    remove_ingredients: List[str] = Field(default_factory=list, description="Specific ingredients user wants excluded/removed")
+    language_detected: Optional[str] = Field(default=None, description="Detected language: English, Nigerian Pidgin, Yoruba, Hausa, Igbo, etc.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_voice_response(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        # Ensure budget is integer or None
+        raw_budget = data.get("budget_naira")
+        if raw_budget is not None:
+            try:
+                # Handle string numbers like '3000', '3,000', '₦3000'
+                if isinstance(raw_budget, str):
+                    clean_b = "".join(c for c in raw_budget if c.isdigit())
+                    data["budget_naira"] = int(clean_b) if clean_b else None
+                else:
+                    data["budget_naira"] = int(raw_budget)
+            except (ValueError, TypeError):
+                data["budget_naira"] = None
+
+        # Ensure servings is integer or None
+        raw_servings = data.get("servings")
+        if raw_servings is not None:
+            try:
+                if isinstance(raw_servings, str):
+                    clean_s = "".join(c for c in raw_servings if c.isdigit())
+                    data["servings"] = int(clean_s) if clean_s else None
+                else:
+                    data["servings"] = int(raw_servings)
+            except (ValueError, TypeError):
+                data["servings"] = None
+
+        # Standardize spice_level if present
+        raw_spice = data.get("spice_level")
+        if raw_spice:
+            s_lower = str(raw_spice).lower()
+            if "mild" in s_lower or "little" in s_lower or "small" in s_lower:
+                data["spice_level"] = "Mild"
+            elif "extra" in s_lower or "suya" in s_lower or "very hot" in s_lower or "plenty" in s_lower:
+                data["spice_level"] = "Suya Extra"
+            elif "hot" in s_lower or "medium" in s_lower or "authentic" in s_lower or "normal" in s_lower:
+                data["spice_level"] = "Authentic Hot"
+
+        # Standardize cooking_fuel if present
+        raw_fuel = data.get("cooking_fuel")
+        if raw_fuel:
+            f_lower = str(raw_fuel).lower()
+            if "gas" in f_lower:
+                data["cooking_fuel"] = "gas"
+            elif "charcoal" in f_lower or "coal" in f_lower or "abacha" in f_lower:
+                data["cooking_fuel"] = "charcoal"
+            elif "electric" in f_lower or "hotplate" in f_lower or "coil" in f_lower:
+                data["cooking_fuel"] = "electric"
+            elif "kerosene" in f_lower or "stove" in f_lower:
+                data["cooking_fuel"] = "kerosene"
+            else:
+                data["cooking_fuel"] = None
+
+        # Ensure lists are lists
+        for list_key in ("dietary", "add_ingredients", "remove_ingredients"):
+            val = data.get(list_key)
+            if val is None:
+                data[list_key] = []
+            elif isinstance(val, str):
+                data[list_key] = [v.strip() for v in val.split(",") if v.strip()]
+            elif isinstance(val, list):
+                data[list_key] = [str(v).strip() for v in val if str(v).strip()]
+
+        return data
+
+
 
