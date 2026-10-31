@@ -7,6 +7,7 @@ import {
   Utensils,
   ShoppingCart,
   Clock,
+  Circle,
   Flame,
   CheckCircle2,
   AlertCircle,
@@ -50,9 +51,14 @@ type SupportedCity = "Lagos" | "Abuja" | "Ibadan" | "Port Harcourt" | "Kano";
 const SUPPORTED_CITIES: SupportedCity[] = ["Lagos", "Abuja", "Ibadan", "Port Harcourt", "Kano"];
 
 interface DetectedItem {
+  id?: string;
   name: string;
   category: string;
-  confidence: number;
+  confidence?: number;
+  certainty?: "clear" | "likely" | "unsure";
+  alternatives?: string[];
+  form?: "raw" | "cooked" | "packaged" | "unknown";
+  container_state?: "full" | "partial" | "nearly_empty" | "residue_only" | "unknown";
   estimated_quantity?: string;
 }
 
@@ -71,6 +77,7 @@ interface Recipe {
   instructions: string[];
   why_this_recipe?: string;
   chef_tips?: string;
+  assumes?: string | null;
 }
 
 interface ShoppingItem {
@@ -241,8 +248,16 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
       {
         "name": "Pure Vegetable Oil",
         "category": "Pantry",
+        "certainty": "clear",
         "confidence": 0.9,
         "estimated_quantity": "Half bottle remaining"
+      },
+      {
+        "name": "White Seasoning Powder",
+        "category": "Pantry",
+        "certainty": "unsure",
+        "alternatives": ["Salt", "Sugar", "White Pepper"],
+        "estimated_quantity": "1 small jar"
       }
     ],
     "recipes": [
@@ -256,6 +271,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
         "cook_time_minutes": 25,
         "difficulty": "Medium",
         "servings": 4,
+        "assumes": "cooking oil is vegetable oil",
         "fridge_ingredients_used": [
           "Plum Tomatoes",
           "Bell Pepper (Tatashe)",
@@ -907,6 +923,18 @@ export default function Home() {
   const [selectedCity, setSelectedCity] = useState<SupportedCity>("Lagos");
   const [showSavingsInfo, setShowSavingsInfo] = useState<boolean>(false);
 
+  // Ingredient Review & Confirmation State
+  const [isReviewStep, setIsReviewStep] = useState<boolean>(false);
+  const [reviewItems, setReviewItems] = useState<DetectedItem[]>([]);
+  const [selectedReviewItemIds, setSelectedReviewItemIds] = useState<Set<string>>(new Set());
+  const [reviewNewItemName, setReviewNewItemName] = useState<string>("");
+  const [reviewNewItemQty, setReviewNewItemQty] = useState<string>("");
+  const [isDemoReview, setIsDemoReview] = useState<boolean>(false);
+
+  // Real Progress Stages (Vision vs Recipe Pipeline)
+  const [pipelinePhase, setPipelinePhase] = useState<"vision" | "recipes">("vision");
+  const [progressStage, setProgressStage] = useState<number>(1);
+
   // =========================================================================
   // Snap + Speak Voice Intelligence State
   // =========================================================================
@@ -968,6 +996,18 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resultsRef = useRef<HTMLDivElement | null>(null);
+  const reviewRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToReview = () => {
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        const elem = document.getElementById("review-section") || reviewRef.current;
+        if (elem) {
+          elem.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 150);
+    }
+  };
 
   const scrollToResults = () => {
     if (typeof window !== "undefined") {
@@ -1280,35 +1320,231 @@ export default function Home() {
     e.preventDefault();
   };
 
-  // Instant Demo Trigger
+  // =========================================================================
+  // Ingredient Review & Confirmation Handlers (Step 2 before cooking)
+  // =========================================================================
+  const initReviewItems = (items: DetectedItem[], isDemo: boolean = false) => {
+    const itemsWithIds: (DetectedItem & { id: string })[] = items.map((it, idx) => ({
+      ...it,
+      id: it.id || `item-${Date.now()}-${idx}-${it.name.replace(/[^a-zA-Z0-9]/g, "_")}`,
+    }));
+
+    setReviewItems(itemsWithIds);
+    setIsDemoReview(isDemo);
+
+    // Grouping rule:
+    // "Looks clear": certainty === "clear" || (!certainty && (!alternatives || alternatives.length === 0))
+    // "Please check": certainty === "unsure" || (alternatives && alternatives.length > 0)
+    // Preselect ONLY "Looks clear" items! Unsure items are NOT preselected!
+    const initialSelected = new Set<string>();
+    itemsWithIds.forEach((it) => {
+      const isUnsure = it.certainty === "unsure" || (it.alternatives && it.alternatives.length > 0);
+      if (!isUnsure) {
+        initialSelected.add(it.id);
+      }
+    });
+
+    setSelectedReviewItemIds(initialSelected);
+    setIsReviewStep(true);
+    setData(null);
+    scrollToReview();
+  };
+
+  const handleChooseAlternative = (itemId: string, alternativeName: string) => {
+    setReviewItems((prev) =>
+      prev.map((it) => {
+        if (it.id === itemId) {
+          return {
+            ...it,
+            name: alternativeName,
+            certainty: "clear",
+            alternatives: [],
+          };
+        }
+        return it;
+      })
+    );
+    setSelectedReviewItemIds((prev) => {
+      const next = new Set(prev);
+      next.add(itemId);
+      return next;
+    });
+  };
+
+  const handleToggleReviewItem = (itemId: string) => {
+    setSelectedReviewItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveReviewItem = (itemId: string) => {
+    setReviewItems((prev) => prev.filter((it) => it.id !== itemId));
+    setSelectedReviewItemIds((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+  };
+
+  const handleAddReviewItem = () => {
+    if (!reviewNewItemName.trim()) return;
+    const newItem: DetectedItem & { id: string } = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: reviewNewItemName.trim(),
+      category: "Pantry",
+      certainty: "clear",
+      alternatives: [],
+      form: "raw",
+      container_state: "full",
+      estimated_quantity: reviewNewItemQty.trim() || undefined,
+    };
+    setReviewItems((prev) => [...prev, newItem]);
+    setSelectedReviewItemIds((prev) => {
+      const next = new Set(prev);
+      next.add(newItem.id);
+      return next;
+    });
+    setReviewNewItemName("");
+    setReviewNewItemQty("");
+  };
+
+  const handleToggleAllLooksClear = (clearItemIds: string[]) => {
+    setSelectedReviewItemIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = clearItemIds.every((id) => next.has(id));
+      if (allSelected) {
+        clearItemIds.forEach((id) => next.delete(id));
+      } else {
+        clearItemIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleConfirmAndCook = async () => {
+    const selectedItems = reviewItems.filter((it) => selectedReviewItemIds.has(it.id!));
+    if (selectedItems.length === 0) {
+      setError("Please select at least one ingredient to cook with.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setPipelinePhase("recipes");
+    setProgressStage(1);
+    setStatusStep("Confirmed ingredients verified…");
+
+    const tStage2 = setTimeout(() => {
+      setProgressStage(2);
+      setStatusStep("Meta Muse Glimmer formulating authentic recipes…");
+    }, 400);
+
+    const tStage3 = setTimeout(() => {
+      setProgressStage(3);
+      setStatusStep("Calculating zero-waste pantry value locally…");
+    }, 3800);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/api/recipes/update?count=3`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          detected_items: selectedItems,
+          sample_type: null,
+          is_demo: isDemoReview,
+          spice_level: spiceLevel,
+          cooking_fuel: cookingFuel,
+        }),
+      });
+
+      clearTimeout(tStage2);
+      clearTimeout(tStage3);
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server responded with HTTP ${res.status}`);
+      }
+
+      const result: ProcessResponse = await res.json();
+      result.detected_items = selectedItems;
+      setData(result);
+      setIsReviewStep(false);
+      setActiveTab("quick");
+      setCompletedSteps({});
+      setCheckedShoppingItems(new Set());
+      scrollToResults();
+
+      // Non-blocking background fetch for 2 additional variation recipes
+      fetch(`${apiUrl}/api/recipes/expand?count=2`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          detected_items: selectedItems,
+          sample_type: null,
+          is_demo: isDemoReview,
+          spice_level: spiceLevel,
+          cooking_fuel: cookingFuel,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((expandData: ProcessResponse | null) => {
+          if (expandData?.recipes?.length) {
+            setData((prev) => {
+              if (!prev) return prev;
+              const existingTitles = new Set(prev.recipes.map((r) => r.title.toLowerCase()));
+              const uniqueNew = expandData.recipes.filter(
+                (r) => !existingTitles.has(r.title.toLowerCase())
+              );
+              if (uniqueNew.length > 0) {
+                return {
+                  ...prev,
+                  recipes: [...prev.recipes, ...uniqueNew],
+                };
+              }
+              return prev;
+            });
+          }
+        })
+        .catch(() => {});
+    } catch (err: unknown) {
+      clearTimeout(tStage2);
+      clearTimeout(tStage3);
+      const message = err instanceof Error ? err.message : "Failed to generate recipes.";
+      setError(message);
+    } finally {
+      setLoading(false);
+      setStatusStep("");
+    }
+  };
+
+  // Instant Demo Trigger (Fetches detected items for review first)
   const triggerDemo = async (sampleType: "market" | "pantry" | "native" = "market") => {
     setLoading(true);
     setError(null);
-    setStatusStep(`Loading ${sampleType === "market" ? "Lagos Market" : sampleType === "pantry" ? "Pantry & Beans" : "Native Greens"} curated demo...`);
+    setStatusStep(`Scanning ${sampleType === "market" ? "Lagos Market" : sampleType === "pantry" ? "Pantry & Beans" : "Native Greens"} provisions...`);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(
-        `${apiUrl}/api/demo/${sampleType}?spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
+        `${apiUrl}/api/demo/${sampleType}?detect_only=true&spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
         { cache: "no-store" }
       );
       if (res.ok) {
         const result: ProcessResponse = await res.json();
-        setData(result);
-        setActiveTab("quick");
-        setCompletedSteps({});
-        setCheckedShoppingItems(new Set());
-        scrollToResults();
+        initReviewItems(result.detected_items, true);
         return;
       }
       throw new Error(`Server returned ${res.status}`);
     } catch {
       const fallbackResult = CLIENT_DEMO_DATA[sampleType] || CLIENT_DEMO_DATA.market;
-      setData(fallbackResult);
-      setActiveTab("quick");
-      setCompletedSteps({});
-      setCheckedShoppingItems(new Set());
-      scrollToResults();
+      initReviewItems(fallbackResult.detected_items, true);
     } finally {
       setLoading(false);
       setStatusStep("");
@@ -1461,24 +1697,28 @@ export default function Home() {
       return;
     }
 
-    // Source A: Real Photo Upload
+    // Source A: Real Photo Upload - Detect ingredients first for confirmation
     if (selectedFile) {
-      setStatusStep("Reading your ingredients…");
+      setPipelinePhase("vision");
+      setProgressStage(1);
+      setStatusStep("Optimizing photo resolution (768px)…");
       try {
         const formData = new FormData();
         formData.append("file", selectedFile);
 
         const timer1 = setTimeout(() => {
-          setStatusStep("Spotting ingredients across your kitchen…");
-        }, 800);
+          setProgressStage(2);
+          setStatusStep("Scanning provisions with Vision Model…");
+        }, 600);
 
         const timer2 = setTimeout(() => {
-          setStatusStep("Planning meals from what you have…");
-        }, 1600);
+          setProgressStage(3);
+          setStatusStep("Classifying clarity & one-tap alternatives…");
+        }, 3500);
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
         const res = await fetch(
-          `${apiUrl}/api/process?spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
+          `${apiUrl}/api/process?detect_only=true&spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
           {
             method: "POST",
             body: formData,
@@ -1495,21 +1735,16 @@ export default function Home() {
 
         const result: ProcessResponse = await res.json();
         // If user already typed extra items before upload, merge them
+        const merged = [...result.detected_items];
         if (preAnalysisItems.length > 0) {
-          const merged = [...result.detected_items];
           for (const extra of preAnalysisItems) {
             if (!merged.some((m) => m.name.toLowerCase() === extra.name.toLowerCase())) {
               merged.push(extra);
             }
           }
-          result.detected_items = merged;
         }
 
-        setData(result);
-        setActiveTab("quick");
-        setCompletedSteps({});
-        setCheckedShoppingItems(new Set());
-        scrollToResults();
+        initReviewItems(merged, result.is_demo || false);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "An unexpected network error occurred.";
         setError(
@@ -1525,50 +1760,9 @@ export default function Home() {
     }
 
     // Source B & C: Ingredients from chips or voice without photo
-    setStatusStep("Reading your ingredients…");
-    const timerStage = setTimeout(() => {
-      setStatusStep("Planning meals from your ingredients…");
-    }, 900);
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/recipes/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          detected_items: effectiveItems,
-          sample_type: null,
-          is_demo: false,
-          spice_level: spiceLevel,
-          cooking_fuel: cookingFuel,
-        }),
-      });
-
-      clearTimeout(timerStage);
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `Server responded with HTTP ${res.status}`);
-      }
-
-      const result: ProcessResponse = await res.json();
-      setData(result);
-      setActiveTab("quick");
-      setCompletedSteps({});
-      setCheckedShoppingItems(new Set());
-      scrollToResults();
-    } catch (err: unknown) {
-      clearTimeout(timerStage);
-      const message = err instanceof Error ? err.message : "Recipe planning failed.";
-      setError(
-        message.includes("Failed to fetch")
-          ? "FastAPI server unreachable at http://localhost:8000. Start backend with: uvicorn app.main:app --reload --port 8000"
-          : message
-      );
-    } finally {
-      setLoading(false);
-      setStatusStep("");
-    }
+    initReviewItems(effectiveItems, false);
+    setLoading(false);
+    return;
   };
 
   // =============================================================================
@@ -1743,6 +1937,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     setPreAnalysisItems([]);
     setTypedIngredient("");
     setShowSavingsInfo(false);
+    setIsReviewStep(false);
+    setReviewItems([]);
+    setSelectedReviewItemIds(new Set());
     setData(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1750,6 +1947,16 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  const looksClearItems = reviewItems.filter((it) => {
+    const isUnsure = it.certainty === "unsure" || (it.alternatives && it.alternatives.length > 0);
+    return !isUnsure;
+  });
+
+  const pleaseCheckItems = reviewItems.filter((it) => {
+    const isUnsure = it.certainty === "unsure" || (it.alternatives && it.alternatives.length > 0);
+    return isUnsure;
+  });
 
   const NIGERIAN_SUGGESTIONS = [
     "Fresh Ugwu",
@@ -2735,6 +2942,284 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             SECTION 4: RESULTS & DETECTED INGREDIENTS PANEL
            ============================================================== */}
         <div id="results-section" ref={resultsRef} className="pt-2">
+          {/* ==============================================================
+              INGREDIENT REVIEW & CONFIRMATION STEP (Requirement 1, 2, 4)
+             ============================================================== */}
+          {isReviewStep && !data && !loading && (
+            <div id="review-section" ref={reviewRef} className="chop-card p-5 sm:p-8 shadow-lg border-2 border-[var(--primary-border)] space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs font-semibold shadow-xs mb-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                    <span>Ingredient Review Step</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-normal text-[var(--text-primary)]">
+                    Confirm your kitchen ingredients
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
+                    Meta Muse Glimmer will formulate recipes using <strong>only confirmed items</strong>. Please check unsure items and tap one-tap choices to confirm.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    {selectedReviewItemIds.size} of {reviewItems.length} selected
+                  </span>
+                </div>
+              </div>
+
+              {/* Group 1: "Looks clear" (Preselected) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#1F5C3A]/10 text-[#1F5C3A] dark:text-[#86EFAC] flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+                      Looks clear ({looksClearItems.length})
+                    </h4>
+                    <span className="text-xs text-[var(--text-muted)] font-normal hidden sm:inline">
+                      • Preselected (tap to toggle or remove)
+                    </span>
+                  </div>
+
+                  {looksClearItems.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAllLooksClear(looksClearItems.map((i) => i.id!))}
+                      className="text-xs text-[#1F5C3A] dark:text-[#86EFAC] hover:underline font-medium cursor-pointer"
+                    >
+                      {looksClearItems.every((i) => selectedReviewItemIds.has(i.id!))
+                        ? "Deselect all"
+                        : "Select all"}
+                    </button>
+                  )}
+                </div>
+
+                {looksClearItems.length === 0 ? (
+                  <p className="text-xs text-[var(--text-muted)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                    No clear items spotted. Review unsure items below or add ingredients manually.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                    {looksClearItems.map((item) => {
+                      const isSelected = selectedReviewItemIds.has(item.id!);
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => handleToggleReviewItem(item.id!)}
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs border ${
+                            isSelected
+                              ? "bg-[#1F5C3A]/15 dark:bg-[#1F5C3A]/30 border-[#1F5C3A] text-[#1F5C3A] dark:text-[#86EFAC]"
+                              : "bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-default)] opacity-60"
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                              isSelected
+                                ? "bg-[#1F5C3A] border-[#1F5C3A] text-white"
+                                : "border-[var(--border-default)] bg-[var(--bg-surface)]"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                          </div>
+                          <span className={isSelected ? "text-[var(--text-primary)]" : "text-[var(--text-muted)] line-through"}>
+                            {item.name}
+                          </span>
+                          {item.estimated_quantity && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-muted)] font-normal">
+                              {item.estimated_quantity}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveReviewItem(item.id!);
+                            }}
+                            className="w-4 h-4 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D94F04] transition-colors ml-0.5 cursor-pointer"
+                            title={`Remove ${item.name}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Group 2: "Please check" (Unsure items, not preselected, one-tap choices) */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+                    Please check ({pleaseCheckItems.length})
+                  </h4>
+                  <span className="text-xs text-[var(--text-muted)] font-normal hidden sm:inline">
+                    • Unsure items (not preselected). Tap a one-tap choice to confirm.
+                  </span>
+                </div>
+
+                {pleaseCheckItems.length === 0 ? (
+                  <p className="text-xs text-[var(--text-muted)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                    No ambiguous items detected. All visible ingredients looked clear!
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {pleaseCheckItems.map((item) => {
+                      const isSelected = selectedReviewItemIds.has(item.id!);
+                      const hasAlternatives = item.alternatives && item.alternatives.length > 0;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`p-3.5 rounded-xl border transition-all space-y-2.5 ${
+                            isSelected
+                              ? "bg-amber-500/10 dark:bg-amber-950/20 border-amber-500/60"
+                              : "bg-[var(--bg-surface-subtle)] border-[var(--border-subtle)]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div
+                              onClick={() => handleToggleReviewItem(item.id!)}
+                              className="flex items-center gap-2 cursor-pointer min-w-0"
+                            >
+                              <div
+                                className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-all ${
+                                  isSelected
+                                    ? "bg-amber-600 border-amber-600 text-white"
+                                    : "border-[var(--border-default)] bg-[var(--bg-surface)]"
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] truncate">
+                                {item.name}
+                              </span>
+                              {item.estimated_quantity && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-muted)] font-normal shrink-0">
+                                  {item.estimated_quantity}
+                                </span>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveReviewItem(item.id!)}
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D94F04] transition-colors cursor-pointer shrink-0"
+                              title={`Remove ${item.name}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Alternatives: One-Tap Choices */}
+                          {hasAlternatives && (
+                            <div className="pt-2 border-t border-[var(--border-subtle)]">
+                              <p className="text-xs text-[var(--text-muted)] mb-1.5 font-medium">
+                                Tap one-tap choice to confirm:
+                              </p>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {item.alternatives!.map((alt, aIdx) => (
+                                  <button
+                                    key={aIdx}
+                                    type="button"
+                                    onClick={() => handleChooseAlternative(item.id!, alt)}
+                                    className="min-h-[28px] px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[#1F5C3A] hover:text-white border border-[var(--border-default)] text-xs font-semibold text-[var(--text-primary)] transition-all active:scale-95 cursor-pointer shadow-xs"
+                                  >
+                                    + {alt}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Add Missing Item Row */}
+              <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
+                <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                  Add another ingredient from your pantry:
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="text"
+                    value={reviewNewItemName}
+                    onChange={(e) => setReviewNewItemName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddReviewItem();
+                      }
+                    }}
+                    placeholder="e.g. Crayfish, Yam, Stockfish, Palm Oil..."
+                    className="w-full sm:flex-1 min-h-[42px] px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#1F5C3A]"
+                  />
+                  <input
+                    type="text"
+                    value={reviewNewItemQty}
+                    onChange={(e) => setReviewNewItemQty(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddReviewItem();
+                      }
+                    }}
+                    placeholder="Qty (e.g. 1 cup)"
+                    className="w-full sm:w-36 min-h-[42px] px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#1F5C3A]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddReviewItem}
+                    disabled={!reviewNewItemName.trim()}
+                    className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-default)] text-xs sm:text-sm font-semibold text-[var(--text-primary)] disabled:opacity-50 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Item</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm & Cook Action CTA */}
+              <div className="pt-4 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <ChefHat className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                  <span>
+                    <strong>{selectedReviewItemIds.size} ingredients</strong> confirmed for recipe generation.
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={resetAll}
+                    className="min-h-[46px] px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-xs sm:text-sm font-medium text-[var(--text-muted)] cursor-pointer active:scale-95 transition-all"
+                  >
+                    New scan
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmAndCook}
+                    disabled={loading || selectedReviewItemIds.size === 0}
+                    className="min-h-[46px] px-6 py-2.5 rounded-xl bg-[#1F5C3A] hover:bg-[#17472D] active:bg-[#123823] text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-50 transition-all"
+                  >
+                    <Utensils className="w-4 h-4 text-white" />
+                    <span>Confirm and cook</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
           {loading && (
             <div className="chop-card p-7 sm:p-10 text-center flex flex-col items-center justify-center relative overflow-hidden shadow-md">
@@ -2744,32 +3229,76 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
               <div className="chop-pill chop-pill-primary mb-3">
                 <Sparkles className="w-3.5 h-3.5 text-[#E8590C]" />
-                <span>Finding What to Chop</span>
+                <span>{pipelinePhase === "vision" ? "Scanning Kitchen Provisions" : "Crafting Authentic Recipes"}</span>
               </div>
 
               <h3 className="text-2xl sm:text-3xl font-normal text-[var(--text-primary)] mb-2">
-                Finding What You Can Cook
+                {pipelinePhase === "vision" ? "Spotting Your Ingredients" : "Formulating Dishes for You"}
               </h3>
               <p className="text-sm text-[var(--text-secondary)] max-w-md mb-6 leading-relaxed font-sans px-2">
-                {statusStep || "Looking closely at your ingredients..."}
+                {statusStep || "Processing..."}
               </p>
 
               <div className="flex flex-col gap-2.5 w-full max-w-sm text-xs text-left">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
-                    <span className="text-[var(--text-primary)] font-medium">Reading ingredients from photo</span>
-                  </div>
-                  <span className="chop-pill chop-pill-primary text-xs">Done</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--primary-border)]">
-                  <div className="flex items-center gap-2.5">
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#E8590C] shrink-0" />
-                    <span className="text-[var(--text-primary)] font-semibold">Matching Nigerian recipes</span>
-                  </div>
-                  <span className="chop-pill chop-pill-accent text-xs">Active</span>
-                </div>
+                {(pipelinePhase === "vision"
+                  ? [
+                      { id: 1, label: "Optimizing photo resolution (768px)" },
+                      { id: 2, label: "Scanning provisions with Vision Model" },
+                      { id: 3, label: "Classifying clarity & one-tap alternatives" },
+                    ]
+                  : [
+                      { id: 1, label: "Confirmed kitchen ingredients verified" },
+                      { id: 2, label: "Formulating authentic recipes (Classic first)" },
+                      { id: 3, label: "Calculating zero-waste pantry value locally" },
+                    ]
+                ).map((stage) => {
+                  const isDone = stage.id < progressStage;
+                  const isActive = stage.id === progressStage;
+                  return (
+                    <div
+                      key={stage.id}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 ${
+                        isActive
+                          ? "bg-[var(--bg-surface-subtle)] border-[var(--primary-border)] shadow-sm"
+                          : isDone
+                          ? "bg-[var(--bg-surface-subtle)] border-[var(--border-subtle)] opacity-90"
+                          : "bg-transparent border-[var(--border-subtle)] opacity-40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                        ) : isActive ? (
+                          <RefreshCw className="w-4 h-4 animate-spin text-[#E8590C] shrink-0" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
+                        )}
+                        <span
+                          className={`truncate ${
+                            isActive
+                              ? "text-[var(--text-primary)] font-semibold"
+                              : isDone
+                              ? "text-[var(--text-primary)] font-medium"
+                              : "text-[var(--text-secondary)]"
+                          }`}
+                        >
+                          {stage.label}
+                        </span>
+                      </div>
+                      <span
+                        className={`chop-pill text-xs shrink-0 ${
+                          isActive
+                            ? "chop-pill-accent"
+                            : isDone
+                            ? "chop-pill-primary"
+                            : ""
+                        }`}
+                      >
+                        {isDone ? "Done" : isActive ? "Active" : "Waiting"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -3379,6 +3908,14 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                             {recipe.description}
                           </p>
 
+                          {/* Assumption Line (Requirement 3) */}
+                          {recipe.assumes && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-medium">
+                              <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                              <span>{recipe.assumes.startsWith("Assumes:") ? recipe.assumes : `Assumes: ${recipe.assumes}`}</span>
+                            </div>
+                          )}
+
                           {/* Reasoning Box */}
                           {recipe.why_this_recipe && (
                             <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-xs flex items-start gap-3 shadow-sm">
@@ -3537,10 +4074,30 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         className="flex items-center justify-between p-3.5 sm:p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] hover:border-[var(--primary-border)] transition-colors"
                       >
                         <div className="space-y-0.5">
-                          <p className="text-sm font-semibold text-[var(--text-primary)]">{item.name}</p>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            Category: <span className="text-[#1F5C3A] dark:text-[#86EFAC] font-medium">{item.category}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{item.name}</p>
+                            {item.certainty && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                item.certainty === "clear"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  : item.certainty === "likely"
+                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                  : "bg-red-500/10 text-red-600 dark:text-red-400"
+                              }`}>
+                                {item.certainty}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[var(--text-muted)] flex items-center gap-2 flex-wrap">
+                            <span>Category: <span className="text-[#1F5C3A] dark:text-[#86EFAC] font-medium">{item.category}</span></span>
+                            {item.form && <span>• Form: <span className="font-medium text-[var(--text-secondary)]">{item.form}</span></span>}
+                            {item.container_state && item.container_state !== "unknown" && <span>• Container: <span className="font-medium text-[var(--text-secondary)]">{item.container_state}</span></span>}
                           </p>
+                          {item.alternatives && item.alternatives.length > 0 && (
+                            <p className="text-[11px] text-[var(--text-muted)] italic">
+                              Alternatives: {item.alternatives.join(", ")}
+                            </p>
+                          )}
                         </div>
                         {item.estimated_quantity && (
                           <span className="chop-pill chop-pill-neutral text-xs">

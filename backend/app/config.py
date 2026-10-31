@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     MUSE_GLIMMER_ENDPOINT: str = "http://localhost:8000/v1"
     MUSE_GLIMMER_MODEL_NAME: str = "meta/muse-glimmer-30b"
     MUSE_GLIMMER_API_KEY: Optional[str] = None
-    MUSE_GLIMMER_TIMEOUT_SECONDS: float = 60.0
+    MUSE_GLIMMER_TIMEOUT_SECONDS: float = 90.0
 
     @model_validator(mode="after")
     def apply_ai_aliases(self):

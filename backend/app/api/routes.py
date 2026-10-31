@@ -62,6 +62,7 @@ async def health_check():
 @router.get("/demo/{sample_type}", response_model=ProcessResponse, tags=["Demo Mode"])
 async def get_demo_recipes(
     sample_type: str = "market",
+    detect_only: bool = Query(default=False, description="Return detected items only for review before cooking"),
     spice_level: Optional[str] = Query(default="Mild", description="Spice level: Mild, Medium, Extra Hot"),
     cooking_fuel: Optional[str] = Query(default="gas", description="Cooking fuel: gas, charcoal, electric, kerosene"),
 ):
@@ -71,13 +72,6 @@ async def get_demo_recipes(
     """
     clean_type = sample_type.lower()
     detected_items, vision_mode, _ = await vision_service.detect_ingredients(b"", sample_type=clean_type, is_demo=True)
-    recipes, shopping_list, recipe_mode, _ = await recipe_service.generate_recipes(
-        detected_items,
-        sample_type=clean_type,
-        is_demo=True,
-        spice_level=spice_level,
-        cooking_fuel=cooking_fuel,
-    )
 
     profile_names = {
         "market": "Lagos Market Haul (Fridge & Counter)",
@@ -85,6 +79,34 @@ async def get_demo_recipes(
         "native": "Native Greens & Smoked Fish Crisper",
     }
     profile_label = profile_names.get(clean_type, "Curated Nigerian Household Provisions")
+
+    if detect_only:
+        logger.info(f"Demo detect_only active for '{clean_type}': {len(detected_items)} items")
+        return ProcessResponse(
+            success=True,
+            is_demo=True,
+            demo_badge=f"Demo Mode • {profile_label}",
+            detected_items=detected_items,
+            recipes=[],
+            shopping_list=[],
+            model_metadata={
+                "vision_model": settings.VISION_MODEL_NAME,
+                "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                "inference_mode": "curated_demo",
+                "is_demo_mode": True,
+                "demo_scenario": profile_label,
+                "vision_engine": "Curated Nigerian Vision Profile",
+                "recipe_engine": "none (detect_only review)",
+            }
+        )
+
+    recipes, shopping_list, recipe_mode, _ = await recipe_service.generate_recipes(
+        detected_items,
+        sample_type=clean_type,
+        is_demo=True,
+        spice_level=spice_level,
+        cooking_fuel=cooking_fuel,
+    )
 
     logger.info(
         f"Verified demo response contract: {len(recipes)} recipes, "
@@ -113,6 +135,7 @@ async def get_demo_recipes(
 @router.post("/process", response_model=ProcessResponse, tags=["Fridge Processing"])
 async def process_fridge_image(
     file: UploadFile = File(...),
+    detect_only: bool = Query(default=False, description="Run vision detection only, returning items for review before recipes are generated"),
     demo: bool = Query(default=False, description="Explicitly trigger fast demo mode with curated data"),
     sample_type: Optional[str] = Query(default=None, description="Preset demo sample: 'market', 'pantry', or 'native'"),
     spice_level: Optional[str] = Query(default="Mild", description="Spice level: Mild, Medium, Extra Hot"),
@@ -163,13 +186,48 @@ async def process_fridge_image(
             image_bytes, sample_type=resolved_sample_type, is_demo=is_demo_file
         )
 
-        # Step 2: Muse Glimmer 30B culinary reasoning & maximization
+        is_overall_mock = is_demo_file or is_vision_mock
+        badge = (
+            "Demo Mode • Curated Nigerian Provisions"
+            if is_overall_mock
+            else None
+        )
+        combined_mode = (
+            "curated_demo"
+            if is_demo_file
+            else ("live" if not is_overall_mock else "auto (resilient fallback)")
+        )
+
+        if detect_only:
+            logger.info(
+                f"Vision detection complete (detect_only=True): {len(detected_items)} items detected. "
+                "Returning items for user confirmation before recipe generation."
+            )
+            return ProcessResponse(
+                success=True,
+                is_demo=is_overall_mock,
+                demo_badge=badge,
+                detected_items=detected_items,
+                recipes=[],
+                shopping_list=[],
+                model_metadata={
+                    "vision_model": settings.VISION_MODEL_NAME,
+                    "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                    "inference_mode": combined_mode,
+                    "is_demo_mode": is_overall_mock,
+                    "vision_engine": vision_mode,
+                    "recipe_engine": "none (detect_only review)",
+                }
+            )
+
+        # Step 2: Muse Glimmer 30B culinary reasoning & maximization (3 recipes first for <10s response)
         recipes, shopping_list, recipe_mode, is_recipe_mock = await recipe_service.generate_recipes(
             detected_items,
             sample_type=resolved_sample_type,
             is_demo=is_demo_file,
             spice_level=spice_level,
             cooking_fuel=cooking_fuel,
+            recipe_count=3,
         )
 
         # Determine overall mock/demo state
@@ -179,7 +237,6 @@ async def process_fridge_image(
             if is_overall_mock
             else None
         )
-
         combined_mode = (
             "curated_demo"
             if is_demo_file
@@ -219,10 +276,13 @@ async def process_fridge_image(
         )
 
 @router.post("/recipes/update", response_model=ProcessResponse, tags=["Recipe Synthesis"])
-async def update_recipes(payload: UpdateRecipesRequest):
+async def update_recipes(
+    payload: UpdateRecipesRequest,
+    count: int = Query(default=3, description="Number of recipes to generate (default 3 for instant generation)"),
+):
     """
     Regenerate recipes using the user's edited detected_items list as the single source of truth.
-    Supports adding items, removing wrong items, and updating quantities.
+    Generates 3 recipes first for ultra-fast response, expandable in background.
     """
     try:
         if not payload.detected_items:
@@ -233,7 +293,7 @@ async def update_recipes(payload: UpdateRecipesRequest):
 
         logger.info(
             f"Updating recipes from edited ingredient list: {len(payload.detected_items)} items "
-            f"(sample_type={payload.sample_type}, is_demo={payload.is_demo})"
+            f"(sample_type={payload.sample_type}, is_demo={payload.is_demo}, count={count})"
         )
 
         recipes, shopping_list, recipe_mode, is_recipe_mock = await recipe_service.generate_recipes(
@@ -242,6 +302,7 @@ async def update_recipes(payload: UpdateRecipesRequest):
             is_demo=payload.is_demo,
             spice_level=payload.spice_level,
             cooking_fuel=payload.cooking_fuel,
+            recipe_count=count,
         )
 
         badge = "Demo Mode • Updated Recipes" if (payload.is_demo or is_recipe_mock) else None
@@ -259,10 +320,60 @@ async def update_recipes(payload: UpdateRecipesRequest):
                 "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
                 "inference_mode": combined_mode,
                 "is_demo_mode": payload.is_demo or is_recipe_mock,
-                "vision_engine": "User Edited Ingredients Panel",
+                "vision_engine": "User Confirmed Ingredients",
                 "recipe_engine": recipe_mode,
             }
         )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error updating recipes from edited ingredients")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Recipe update failed: {str(e)}",
+        )
+
+@router.post("/recipes/expand", response_model=ProcessResponse, tags=["Recipe Synthesis"])
+async def expand_recipes(
+    payload: UpdateRecipesRequest,
+    count: int = Query(default=2, description="Number of additional variation recipes to generate in background"),
+):
+    """
+    Background non-blocking endpoint:
+    Synthesizes additional creative variation recipes to enrich the user's initial meal set.
+    """
+    try:
+        if not payload.detected_items:
+            return ProcessResponse(success=True, detected_items=[], recipes=[], shopping_list=[])
+
+        recipes, shopping_list, recipe_mode, is_recipe_mock = await recipe_service.generate_recipes(
+            payload.detected_items,
+            sample_type=payload.sample_type,
+            is_demo=payload.is_demo,
+            spice_level=payload.spice_level,
+            cooking_fuel=payload.cooking_fuel,
+            recipe_count=count,
+        )
+
+        return ProcessResponse(
+            success=True,
+            is_demo=payload.is_demo or is_recipe_mock,
+            demo_badge=None,
+            detected_items=payload.detected_items,
+            recipes=recipes,
+            shopping_list=shopping_list,
+            model_metadata={
+                "vision_model": settings.VISION_MODEL_NAME,
+                "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                "inference_mode": "background_expansion",
+                "is_demo_mode": payload.is_demo or is_recipe_mock,
+                "vision_engine": "User Confirmed Ingredients",
+                "recipe_engine": recipe_mode,
+            }
+        )
+    except Exception as e:
+        logger.warning(f"Background recipe expansion failed non-critically: {e}")
+        return ProcessResponse(success=False, detected_items=payload.detected_items, recipes=[], shopping_list=[])
     except HTTPException:
         raise
     except Exception as e:

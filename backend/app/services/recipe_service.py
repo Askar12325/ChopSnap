@@ -1,5 +1,6 @@
 # NOTE: All demo recipes need review by an authentic Nigerian cook.
 
+import hashlib
 import json
 import logging
 import re
@@ -10,12 +11,16 @@ from ..models.schemas import DetectedItem, Recipe, ShoppingItem
 
 logger = logging.getLogger(__name__)
 
-MUSE_GLIMMER_SYSTEM_PROMPT = """You are a master Nigerian culinary chef and resourceful home cook powered by Meta's Muse Glimmer (30B open-weight model).
-Your mission: Given the household food items detected from the user's photo (from fridge, pantry, or kitchen counter), formulate 5 authentic Nigerian recipes categorized by meal-type and financial tier:
+# In-memory recipe cache by ingredient set + preferences + count
+_RECIPE_CACHE = {}
+
+def get_muse_system_prompt(recipe_count: int = 3) -> str:
+    return f"""You are a master Nigerian culinary chef and resourceful home cook powered by Meta's Muse Glimmer (30B open-weight model).
+Your mission: Given the household food items detected from the user's photo (from fridge, pantry, or kitchen counter), formulate {recipe_count} authentic Nigerian recipes categorized by meal-type and financial tier:
 
 CRITICAL RECIPE STRUCTURE:
 1. ORDERING RULE: Every ingredient set MUST produce at least one CLASSIC Nigerian heritage dish FIRST (e.g. ugwu + stockfish -> authentic Traditional Ofe Ugwu / Fisherman's Soup; tomatoes + rice -> Classic Obe Ata / Jollof / Fried Rice; beans -> Classic Ewa Aganyin or Pottage). Follow the classic dish with resourceful creative variations.
-2. DISH MIX: Always return 2-3 Quick Meals (ready in <= 20 mins) and 2-3 Proper Cooking dishes (25-45 mins). Total recipes: 5.
+2. DISH MIX: Return {recipe_count} recipes covering both Quick Meals (ready in <= 20 mins) and Proper Cooking dishes (25-45 mins). Total recipes: {recipe_count}.
 3. SPICE CALIBRATION (Scotch Bonnet / Ata Rodo):
    - Mild (default): 1 scotch bonnet for 2 servings (gentle warming flavor without burning heat).
    - Authentic Hot: 2-3 scotch bonnets for authentic Lagos street flavor.
@@ -34,11 +39,16 @@ CRITICAL RECIPE STRUCTURE:
    - NEVER mention or claim health benefits (e.g. do NOT say "nutrient-dense", "vitamin-rich", "cleansing", "boosts immunity", or "healthy fats").
    - NEVER include calorie counts, macro breakdowns, or nutrient numbers.
    - Focus exclusively on taste, texture, authentic Nigerian cooking techniques, and budget efficiency.
+7. STRICT INGREDIENT USAGE & UNCERTAINTY RULES:
+   - Recipes MUST use ONLY the selected confirmed items provided in the kitchen provisions list.
+   - NEVER assume the type of protein or oil when the certainty is unsure. If an item is listed as unsure or has alternatives (e.g. generic 'oil', 'fish', 'meat', or 'white powder'), NEVER arbitrarily assume it is chicken, beef, goat meat, palm oil, or groundnut oil unless specifically stated in the confirmed item name.
+   - NEVER build a dish around residue or nearly-empty containers.
+   - ASSUMPTIONS: If a recipe relies on any culinary assumption, you MUST include an "assumes" field explaining it clearly as "Assumes: <assumption>" (e.g. "Assumes: cooking oil is vegetable oil" or "Assumes: white powder is salt"). If no assumption was made, set "assumes": null.
 
 Output Schema (return strictly valid JSON matching this schema):
-{
+{{
   "recipes": [
-    {
+    {{
       "title": "Nigerian dish name (Classic dish first)",
       "description": "Appetizing culinary description",
       "meal_type": "quick | proper",
@@ -52,18 +62,21 @@ Output Schema (return strictly valid JSON matching this schema):
       "missing_ingredients_needed": ["Small staple 1"],
       "instructions": ["Step 1", "Step 2", "Step 3"],
       "why_this_recipe": "1-2 sentences explaining why this dish was chosen, why it is classic or creative, and how it maximizes on-hand ingredients.",
-      "chef_tips": "Authentic Nigerian culinary secret"
-    }
+      "chef_tips": "Authentic Nigerian culinary secret",
+      "assumes": "Assumes: cooking oil is vegetable oil, or null if none"
+    }}
   ],
   "shopping_list": [
-    {
+    {{
       "item": "Pantry staple name",
       "estimated_cost": "~₦150 (Pantry staple)",
       "for_recipes": ["Recipe title"]
-    }
+    }}
   ]
-}
+}}
 """
+
+MUSE_GLIMMER_SYSTEM_PROMPT = get_muse_system_prompt(3)
 
 # NOTE: All demo recipes need review by an authentic Nigerian cook.
 # High-Fidelity Authentic Nigerian Culinary Recipe Collections (Classic first, 2-3 Quick + 2-3 Proper)
@@ -617,9 +630,11 @@ class RecipeService:
         is_demo: bool = False,
         spice_level: str = "Mild",
         cooking_fuel: str = "gas",
+        recipe_count: int = 3,
     ) -> Tuple[List[Recipe], List[ShoppingItem], str, bool]:
         """
         Synthesizes Nigerian recipes and returns (recipes, shopping_list, provider_used, is_mock).
+        Optimized for <10s generation by producing 3 high-impact dishes first, expandable on demand.
         """
         # If demo mode is active, return curated recipes immediately without network delay
         if is_demo or sample_type:
@@ -628,10 +643,32 @@ class RecipeService:
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
             return adjusted_recipes, shopping, "demo_curated", True
 
-        item_summary = [
-            f"- {item.name} ({item.estimated_quantity or 'available'}, Category: {item.category})"
-            for item in detected_items
-        ]
+        # Check in-memory recipe cache for repeated queries
+        cache_key = hashlib.sha256(
+            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}".encode()
+        ).hexdigest()
+        if cache_key in _RECIPE_CACHE:
+            cached_recipes, cached_shopping, cached_mode = _RECIPE_CACHE[cache_key]
+            logger.info(f"Recipe cache HIT for key {cache_key[:10]}: returning {len(cached_recipes)} recipes instantly.")
+            return (
+                [r.model_copy(deep=True) for r in cached_recipes],
+                [s.model_copy(deep=True) for s in cached_shopping],
+                f"{cached_mode} (cache_hit)",
+                False,
+            )
+
+        item_summary = []
+        for item in detected_items:
+            details = [item.name]
+            if item.estimated_quantity:
+                details.append(f"qty: {item.estimated_quantity}")
+            details.append(f"category: {item.category}")
+            details.append(f"certainty: {getattr(item, 'certainty', 'clear')}")
+            if getattr(item, "alternatives", None):
+                details.append(f"alternatives: {', '.join(item.alternatives)}")
+            if getattr(item, "form", None) and item.form != "unknown":
+                details.append(f"form: {item.form}")
+            item_summary.append("- " + " | ".join(details))
 
         if settings.INFERENCE_MODE == "mock":
             logger.info("INFERENCE_MODE is set to 'mock'. Returning pre-crafted Nigerian recipes.")
@@ -642,20 +679,21 @@ class RecipeService:
         # Attempt live inference with Meta Muse Glimmer 30B
         try:
             if settings.MUSE_GLIMMER_PROVIDER == "ollama":
-                raw_recipes, shopping = await self._call_ollama_chat(item_summary, spice_level, cooking_fuel)
-                adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
-                return adjusted_recipes, shopping, f"live_ollama_{settings.MUSE_GLIMMER_MODEL_NAME}", False
+                raw_recipes, shopping = await self._call_ollama_chat(item_summary, spice_level, cooking_fuel, recipe_count)
+                mode_str = f"live_ollama_{settings.MUSE_GLIMMER_MODEL_NAME}"
             else:
-                raw_recipes, shopping = await self._call_openai_compatible(item_summary, spice_level, cooking_fuel)
-                adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
-                return adjusted_recipes, shopping, f"live_openai_{settings.MUSE_GLIMMER_MODEL_NAME}", False
+                raw_recipes, shopping = await self._call_openai_compatible(item_summary, spice_level, cooking_fuel, recipe_count)
+                mode_str = f"live_openai_{settings.MUSE_GLIMMER_MODEL_NAME}"
+
+            adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
+            _RECIPE_CACHE[cache_key] = (adjusted_recipes, shopping, mode_str)
+            return adjusted_recipes, shopping, mode_str, False
         except Exception as e:
             logger.warning(
-                f"Muse Glimmer 30B inference failed ({type(e).__name__}: {e}). "
-                f"Falling back to authentic Nigerian culinary recipes."
+                f"Muse Glimmer 30B inference failed ({type(e).__name__}: {e})."
             )
-            if settings.INFERENCE_MODE == "live" and not settings.FALLBACK_TO_MOCK:
-                raise RuntimeError(f"Live Muse Glimmer inference failed and fallback is disabled: {e}")
+            if settings.INFERENCE_MODE == "live":
+                raise RuntimeError(f"Live Muse Glimmer inference failed: {e}") from e
 
             raw_recipes, shopping = self._mock_recipes(detected_items)
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
@@ -666,28 +704,31 @@ class RecipeService:
         item_summary: List[str],
         spice_level: str = "Mild",
         cooking_fuel: str = "gas",
+        recipe_count: int = 3,
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:
-        """Calls vLLM, LMDeploy, or Ollama /v1 OpenAI-compatible endpoint."""
+        """Calls vLLM, LMDeploy, or Ollama /v1 OpenAI-compatible endpoint with capped tokens."""
         user_message = (
             f"Here are the provisions currently available in the kitchen:\n"
             + "\n".join(item_summary)
             + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}.\n"
-            + "Please formulate 5 authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
-            + "containing 2-3 Quick Meals (<=20m) and 2-3 Proper Cooking dishes, plus a minimal shopping list. "
+            + f"Please formulate {recipe_count} authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
+            + f"including Quick Meals (<=20m) and Proper Cooking dishes, plus a minimal shopping list. "
             + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
         )
 
         url = f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/chat/completions"
-        logger.info(f"Dispatching recipe synthesis to Muse Glimmer at {url} (model: {settings.MUSE_GLIMMER_MODEL_NAME})")
+        logger.info(f"Dispatching recipe synthesis to Muse Glimmer at {url} (model: {settings.MUSE_GLIMMER_MODEL_NAME}, count: {recipe_count})")
 
         payload = {
             "model": settings.MUSE_GLIMMER_MODEL_NAME,
             "messages": [
-                {"role": "system", "content": MUSE_GLIMMER_SYSTEM_PROMPT},
+                {"role": "system", "content": get_muse_system_prompt(recipe_count)},
                 {"role": "user", "content": user_message}
             ],
             "temperature": 0.5,
-            "response_format": {"type": "json_object"}
+            "response_format": {"type": "json_object"},
+            "reasoning_effort": "low",
+            "max_completion_tokens": 2200,
         }
 
         headers = {}
@@ -698,7 +739,7 @@ class RecipeService:
             res = await client.post(url, json=payload, headers=headers)
             res.raise_for_status()
             data = res.json()
-            raw_text = data["choices"][0]["message"]["content"]
+            raw_text = data["choices"][0]["message"].get("content") or ""
             return self._parse_recipe_json(raw_text)
 
     async def _call_ollama_chat(
@@ -706,14 +747,15 @@ class RecipeService:
         item_summary: List[str],
         spice_level: str = "Mild",
         cooking_fuel: str = "gas",
+        recipe_count: int = 3,
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:
         """Calls native Ollama chat API."""
         user_message = (
             f"Here are the provisions currently available in the kitchen:\n"
             + "\n".join(item_summary)
             + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}.\n"
-            + "Please formulate 5 authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
-            + "containing 2-3 Quick Meals (<=20m) and 2-3 Proper Cooking dishes, plus a minimal shopping list. "
+            + f"Please formulate {recipe_count} authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
+            + f"including Quick Meals (<=20m) and Proper Cooking dishes, plus a minimal shopping list. "
             + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
         )
 
@@ -723,13 +765,14 @@ class RecipeService:
         payload = {
             "model": settings.MUSE_GLIMMER_MODEL_NAME,
             "messages": [
-                {"role": "system", "content": MUSE_GLIMMER_SYSTEM_PROMPT},
+                {"role": "system", "content": get_muse_system_prompt(recipe_count)},
                 {"role": "user", "content": user_message}
             ],
             "stream": False,
             "format": "json",
             "options": {
                 "temperature": 0.5,
+                "num_predict": 1800,
             }
         }
 

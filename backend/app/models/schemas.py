@@ -1,14 +1,19 @@
 import logging
+import re
 from typing import List, Optional, Any
 from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
 class DetectedItem(BaseModel):
-    name: str = Field(..., description="Name of the food item detected in the fridge, pantry, or kitchen counter")
+    name: str = Field(..., description="Name of the food item detected")
     category: str = Field(default="Produce", description="Category like Produce, Protein, Dairy, Pantry, Condiment, etc.")
-    confidence: float = Field(default=0.92, description="Confidence score")
-    estimated_quantity: Optional[str] = Field(default=None, description="Rough quantity observed (e.g., '4 medium', 'half carton', '1 bowl')")
+    certainty: str = Field(default="clear", description="Certainty level: 'clear', 'likely', or 'unsure'")
+    alternatives: List[str] = Field(default_factory=list, description="Plausible alternatives if certainty is not clear (e.g., ['salt', 'sugar', 'powdered milk'])")
+    form: str = Field(default="raw", description="Food form: 'raw', 'cooked', 'packaged', or 'unknown'")
+    container_state: str = Field(default="full", description="Container state: 'full', 'partial', 'nearly_empty', 'residue_only', or 'unknown'")
+    estimated_quantity: Optional[str] = Field(default=None, description="Rough quantity observed (e.g., 'about 1-2 cups', 'many')")
+    confidence: Optional[float] = Field(default=None, description="Derived confidence score for backward compatibility")
 
     @model_validator(mode="before")
     @classmethod
@@ -22,21 +27,54 @@ class DetectedItem(BaseModel):
         # Normalize common LLM aliases
         name = data.get("name") or data.get("item") or data.get("ingredient") or "Household Provision"
         category = data.get("category") or data.get("type") or "Produce"
-        confidence = data.get("confidence") or data.get("score") or 0.92
+
+        # Certainty: "clear", "likely", "unsure"
+        certainty = str(data.get("certainty") or "").lower().strip()
+        if certainty not in ("clear", "likely", "unsure"):
+            # Check legacy float confidence if present
+            raw_conf = data.get("confidence")
+            if isinstance(raw_conf, (int, float)):
+                if raw_conf >= 0.90:
+                    certainty = "clear"
+                elif raw_conf >= 0.70:
+                    certainty = "likely"
+                else:
+                    certainty = "unsure"
+            else:
+                certainty = "likely"
+
+        # Alternatives list
+        raw_alts = data.get("alternatives") or []
+        if isinstance(raw_alts, list):
+            alternatives = [str(a).strip() for a in raw_alts if str(a).strip()]
+        else:
+            alternatives = []
+
+        # Form: raw / cooked / packaged / unknown
+        form = str(data.get("form") or "unknown").lower().strip()
+        if form not in ("raw", "cooked", "packaged", "unknown"):
+            form = "unknown"
+
+        # Container state: full / partial / nearly_empty / residue_only / unknown
+        container_state = str(data.get("container_state") or "full").lower().strip()
+        if container_state not in ("full", "partial", "nearly_empty", "residue_only", "unknown"):
+            container_state = "unknown"
+
         qty = data.get("estimated_quantity") or data.get("quantity") or data.get("qty")
 
-        # Clamp confidence to valid float range 0.0 - 1.0
-        try:
-            conf_val = float(confidence)
-            conf_val = max(0.1, min(1.0, conf_val))
-        except (ValueError, TypeError):
-            conf_val = 0.92
+        # Map certainty to numeric confidence
+        conf_map = {"clear": 0.95, "likely": 0.80, "unsure": 0.50}
+        confidence = conf_map.get(certainty, 0.80)
 
         return {
             "name": str(name).strip(),
             "category": str(category).strip().title(),
-            "confidence": round(conf_val, 2),
+            "certainty": certainty,
+            "alternatives": alternatives,
+            "form": form,
+            "container_state": container_state,
             "estimated_quantity": str(qty).strip() if qty else None,
+            "confidence": confidence,
         }
 
 class Recipe(BaseModel):
@@ -59,6 +97,10 @@ class Recipe(BaseModel):
     chef_tips: Optional[str] = Field(
         default="Cook on moderate flame to let aromatic peppers and palm oil bloom without scorching.",
         description="Pro tips for authentic Nigerian flavor and technique"
+    )
+    assumes: Optional[str] = Field(
+        default=None,
+        description="Culinary assumptions made by the model if uncertain ingredients were used (e.g. 'Assumes cooking oil is vegetable oil')"
     )
 
     @model_validator(mode="before")
@@ -178,6 +220,21 @@ class Recipe(BaseModel):
         except (ValueError, TypeError):
             servings_int = 2
 
+        # 11. Culinary Assumptions
+        raw_assumes = data.get("assumes") or data.get("assumption") or data.get("assumptions")
+        if isinstance(raw_assumes, list):
+            assumes_str = "; ".join(str(x).strip() for x in raw_assumes if str(x).strip())
+        elif isinstance(raw_assumes, str) and raw_assumes.strip():
+            assumes_str = raw_assumes.strip()
+        else:
+            assumes_str = None
+
+        if assumes_str and assumes_str.lower() in ("null", "none", "n/a", "no assumptions", "false"):
+            assumes_str = None
+        elif assumes_str:
+            clean_text = re.sub(r"^(?:assumes|assumed|assumption)\s*:\s*", "", assumes_str, flags=re.IGNORECASE).strip()
+            assumes_str = f"Assumes: {clean_text}" if clean_text else None
+
         return {
             "title": str(title).strip(),
             "description": str(description).strip(),
@@ -193,6 +250,7 @@ class Recipe(BaseModel):
             "instructions": [str(x).strip() for x in instructions if str(x).strip()],
             "why_this_recipe": str(why).strip(),
             "chef_tips": str(tips).strip() if tips else None,
+            "assumes": assumes_str,
         }
 
 class ShoppingItem(BaseModel):

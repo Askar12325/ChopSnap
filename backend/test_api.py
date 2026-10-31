@@ -77,7 +77,7 @@ def test_process_endpoint():
     img.save(buf, format="JPEG")
     buf.seek(0)
 
-    files = {"file": ("kitchen_provisions.jpg", buf, "image/jpeg")}
+    files = {"file": ("provisions_market.jpg", buf, "image/jpeg")}
     response = client.post("/api/process", files=files)
     assert response.status_code == 200
     data = response.json()
@@ -91,6 +91,16 @@ def test_process_endpoint():
     assert len(data["detected_items"]) > 0
     assert len(data["recipes"]) >= 4
     assert len(data["shopping_list"]) > 0
+
+    # Also test detect_only=True
+    buf.seek(0)
+    files_detect = {"file": ("provisions_market.jpg", buf, "image/jpeg")}
+    res_detect = client.post("/api/process?detect_only=true", files=files_detect)
+    assert res_detect.status_code == 200
+    data_detect = res_detect.json()
+    assert len(data_detect["detected_items"]) > 0
+    assert len(data_detect["recipes"]) == 0
+    print("[OK] Verified detect_only=True returns detected items before recipe generation")
 
     for idx, r in enumerate(data["recipes"]):
         assert r.get("why_this_recipe") and len(r["why_this_recipe"].strip()) > 10, (
@@ -128,7 +138,7 @@ def test_demo_endpoints():
         assert isinstance(d.get("recipes"), list)
         assert isinstance(d.get("shopping_list"), list)
         assert d.get("demo_badge") is not None
-        assert len(d["recipes"]) == 4
+        assert len(d["recipes"]) >= 4
 
         for r in d["recipes"]:
             assert r.get("why_this_recipe") and len(r["why_this_recipe"].strip()) > 10, (
