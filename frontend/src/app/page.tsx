@@ -2059,7 +2059,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
   const somePricesUnavailable = unpricedItemsCount > 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col justify-between selection:bg-[#1F5C3A] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-transparent text-[var(--text-primary)] flex flex-col justify-between selection:bg-[#1F5C3A] selection:text-white overflow-x-hidden">
       {/* 1. Global Navigation Bar */}
       <header className="sticky top-0 z-40 bg-[var(--bg-page)]/95 backdrop-blur-md border-b border-[var(--border-subtle)]">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between gap-2.5">
@@ -4142,7 +4142,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
       </main>
 
       {/* 4. Polished Footer */}
-      <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-page)] py-8 text-sm text-[var(--text-secondary)] mt-12">
+      <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-page)]/80 backdrop-blur-sm py-8 text-sm text-[var(--text-secondary)] mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
             <div className="w-6 h-6 rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface)] shrink-0 shadow-sm">
