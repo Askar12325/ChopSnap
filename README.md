@@ -1,6 +1,6 @@
 # 🍲 ChopSnap
 > **Meta Global AI Developer Hackathon 2026 — Indie Track**  
-> *Snap your kitchen. Know what to chop.*
+> *ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.*
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.5_(Turbopack)-black.svg?logo=next.js&logoColor=white)](https://nextjs.org)
@@ -12,7 +12,7 @@
 
 ## ⚡ 30-Second Executive Summary
 
-**ChopSnap** is an intelligent, zero-waste Nigerian culinary assistant. Users snap a photograph of their **refrigerator, pantry shelf, or kitchen counter**. 
+**ChopSnap** helps you cook Nigerian meals with the ingredients you already have, within your budget. Users snap a photograph of their **refrigerator, pantry shelf, or kitchen counter**. 
 - An **Open Vision-Language Model** spots raw ingredients, perishables, and cooked leftovers.
 - **Meta’s Muse Glimmer (30B open-weight)** performs culturally grounded culinary reasoning to formulate 4 categorized dishes across **Quick Meals (≤20m)** and **Proper Cooking**, calibrated for both **Everyday Budget** and **Comfortable Living**—complete with clear "Why this works" reasoning and a minimal 2–3 item shopping list.
 
@@ -31,7 +31,7 @@
 
 ChopSnap provides an intelligent culinary bridge:
 - **1. Snap**: Accepts any kitchen photo: refrigerator shelves, pantry racks, or kitchen counter prep surfaces.
-- **2. Check**: Understands authentic Nigerian culinary chemistry: balances pepper reductions (*ata rodo*, *tatashe*), oil blooming, protein stretching (smoked mackerel, crayfish, stockfish), and starch retrogradation (cold rice for jollof), matching dishes to your budget.
+- **2. Check**: Understands authentic Nigerian culinary chemistry: balances pepper reductions (*ata rodo*, *tatashe*), oil blooming, fish and meat stretching (smoked mackerel, crayfish, stockfish), and starch retrogradation (cold rice for jollof), matching dishes to your budget.
 - **3. Cook**: Delivers straightforward preparation steps with what you already have, plus a lean shopping list of only essential missing items.
 
 ---
@@ -40,7 +40,7 @@ ChopSnap provides an intelligent culinary bridge:
 
 | Feature | Description |
 | :--- | :--- |
-| 📸 **Multimodal Kitchen Scanner** | Detects and catalogs produce, proteins, dairy, starches, and condiments from any kitchen photo with confidence metrics. |
+| 📸 **Multimodal Kitchen Scanner** | Detects and catalogs vegetables, fish, meats, pantry staples, and condiments from any kitchen photo with confidence metrics. |
 | ⚡ **Quick Meals (≤20 Mins)** | Immediate hunger antidotes (e.g. 10-minute peppered egg scrambles, sweet dodo frittatas, express spiced honey beans). |
 | 🍲 **Proper Cooking** | Deep authentic dishes (e.g. classic buka stew with cold rice, royal smoked fish ofe ugwu, authentic ewa aganyin). |
 | 🪙 **Everyday Budget Tier** | Resourceful street techniques, low-cost staples, and ingredient stretching (~₦600–₦1,100). |
@@ -186,8 +186,14 @@ ChopSnap includes zero-cost **Snap + Speak** voice input powered by the Web Spee
 
 1. **Baseten & Dedicated Inference Hosting**: Deploy quantized Meta Muse Glimmer 30B and Muse Spark Open on cloud serverless infrastructure (Baseten / vLLM) for high-concurrency production serving.
 2. **Fine-Tuned West African Regional LoRA**: Fine-tune Muse Glimmer on regional dialects, local marketplace ingredient naming variations (*efirin*, *nchanwu*, *ata rodo*, *shombo*), and diaspora substitutions.
-3. **Receipt & Expiry OCR**: Cross-reference grocery receipts with shelf photos to track ingredient freshness decay and prompt cooking reminders before spoilage.
+3. **Receipt & Expiry OCR**: Cross-reference grocery receipts with shelf photos to monitor ingredient freshness and prompt cooking reminders before spoilage.
 4. **WhatsApp & SMS Export**: 1-click sharing of the minimal shopping list directly to local open-market vendors or family shoppers via WhatsApp.
+5. **Ingredients Used & Value of Ingredients You're Using**:
+   - **Formula**: Real code-computed usage percentage `(Unique kitchen ingredients used in displayed recipes ÷ Total confirmed kitchen ingredients) × 100`.
+   - **Market Value**: `Sum of approximate local market prices for all used ingredients in selected city (estimate)`. This represents the approximate market value of what you already have at home, not a comparison against a specific purchase.
+   - **Price Estimates**: Prices are rough estimates and have not been formally reviewed. They will be updated and verified regularly. Market prices in `frontend/src/data/prices.json` represent approximate retail ranges in Nigerian markets that can be edited.
+   - **Normalised, Alias-Aware Matching**: Standardizes names, strips measurement units/quantities, and maps Nigerian ingredient aliases (`ata rodo` ↔ `scotch bonnet`, `okporoko` ↔ `stockfish`, `ugwu` ↔ `pumpkin leaves`, `titus` ↔ `mackerel`). Whole-word matching strictly prevents false positives (`oil` does not match `palm oil` or `vegetable oil` unless the user's item was literally `oil`).
+   - **Unit Tests**: Full test suite verifying alias matching, multi-source recipe checks, and oil differentiation (`npm test` in `frontend`).
 
 ---
 

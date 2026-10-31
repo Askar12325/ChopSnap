@@ -118,7 +118,7 @@ DISHES = [
         "time": "20 Mins",
         "gradient": ("#1F5C3A", "#2B1B12", "#D94F04"),
         "accent": "#86EFAC",
-        "elements": ["Farm Fresh Produce", "Savory Proteins", "Traditional Spices"]
+        "elements": ["Farm Fresh Produce", "Smoked Fish & Meats", "Traditional Spices"]
     }
 ]
 

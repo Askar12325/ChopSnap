@@ -14,10 +14,29 @@ __pycache__/
 *$py.class
 backend/.venv/
 
-# Environment files
+# Environment files (ignore all .env files everywhere except .env.example)
 .env
-.env.local
-.env.*.local
+.env.*
+*.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Root screenshot PNGs
+before.png
+after-*.png
+laptop_*.png
+mobile_*.png
+results_*.png
+feature_*.png
+
+# Root test & capture scripts
+capture_*.js
+test_features.js
+
+# Test images
+backend/test_images/
 
 # OS files
 Thumbs.db

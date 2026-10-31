@@ -38,7 +38,16 @@ import {
   MicOff,
   Volume2,
   Undo2,
+  MapPin,
 } from "lucide-react";
+import cityPricesData from "../data/prices.json";
+import {
+  isIngredientUsedInRecipes,
+  getIngredientPrice,
+} from "../utils/matching";
+
+type SupportedCity = "Lagos" | "Abuja" | "Ibadan" | "Port Harcourt" | "Kano";
+const SUPPORTED_CITIES: SupportedCity[] = ["Lagos", "Abuja", "Ibadan", "Port Harcourt", "Kano"];
 
 interface DetectedItem {
   name: string;
@@ -107,6 +116,7 @@ interface PreviousVoiceState {
   cookingFuel: "gas" | "charcoal" | "electric" | "kerosene";
   tierFilter: "all" | "budget" | "comfortable";
   detectedItems: DetectedItem[];
+  preAnalysisItems?: DetectedItem[];
 }
 
 // Map dish title to local SVG in /public/dishes/ with fallback
@@ -297,7 +307,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Add chilled cooked rice, breaking up lumps with a wooden spoon over brisk heat for 5 minutes.",
           "Fold in shredded fresh ugwu leaves and fried dodo cubes during the final 90 seconds so greens stay vibrant and crisp."
         ],
-        "why_this_recipe": "Resourcefully repurposes day-old chilled rice, using sliced fresh ugwu leaves at the very end to preserve vitamins and vivid green color.",
+        "why_this_recipe": "Resourcefully repurposes day-old chilled rice, folding in sliced fresh ugwu leaves at the very end to preserve their crisp texture and vivid green color.",
         "chef_tips": "Chilled rice grains are slightly dehydrated, meaning they absorb savory seasoned pan oils without turning mushy."
       },
       {
@@ -324,7 +334,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Crack eggs into pan, lower flame to medium, and stir gently for 2 minutes until soft fluffy curds form.",
           "Serve steaming hot with bread, rice, or yam."
         ],
-        "why_this_recipe": "Zero-waste quick protein meal prepared in under 10 minutes using only staple eggs, onions, and scotch bonnet with zero extra shopping required.",
+        "why_this_recipe": "Zero-waste quick meal prepared in under 10 minutes using only staple eggs, onions, and scotch bonnet with zero extra shopping required.",
         "chef_tips": "Saut\u00e9ing onions until golden first caramelizes natural sugars, giving savory richness without needing butter."
       },
       {
@@ -503,7 +513,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Serve with thick golden fried sweet plantain fingers or swallow."
         ],
         "why_this_recipe": "A revered Nigerian classic: pairs slow-steeped stockfish collagen with whole smoked catfish and fresh ugwu in unbleached palm oil for deep ancestral umami.",
-        "chef_tips": "Turning off the heat right as ugwu is folded keeps the leaves vibrant emerald green and crisp with zero vitamin loss."
+        "chef_tips": "Turning off the heat right as ugwu is folded keeps the leaves vibrant emerald green and tender-crisp."
       },
       {
         "title": "Fisherman's Native Palm Oil Stew with Softened Stockfish Bits & Ugwu",
@@ -537,7 +547,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
       },
       {
         "title": "Native Flash-Wilted Ugwu & Palm Oil Scramble over Leftover Rice",
-        "description": "Fast nutrient-dense native skillet: fresh shredded pumpkin leaves flash-sizzled in aromatic palm oil with beaten eggs and scotch bonnet over warm leftover rice.",
+        "description": "Fast native skillet: fresh shredded pumpkin leaves flash-sizzled in aromatic palm oil with beaten eggs and scotch bonnet over warm leftover rice.",
         "meal_type": "quick",
         "financial_tier": "budget",
         "estimated_cost_tier": "~\u20a6700 (Everyday Budget)",
@@ -560,8 +570,8 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Pour in whisked eggs, swirl gently, then fold in shredded ugwu leaves.",
           "Serve piping hot over reheated leftover white rice."
         ],
-        "why_this_recipe": "Rescues fresh ugwu leaves with a flash 90-second palm oil sizzle, locking in chlorophyll while coating leftover rice with rich savory fats.",
-        "chef_tips": "Cooking ugwu for under 90 seconds preserves its vivid chlorophyll green and crisp vitamin crunch."
+        "why_this_recipe": "Rescues fresh ugwu leaves with a flash 90-second palm oil sizzle, locking in vibrant color while coating leftover rice with rich savory sauce.",
+        "chef_tips": "Cooking ugwu for under 90 seconds preserves its vivid green color and crisp vegetable crunch."
       },
       {
         "title": "Peppered Smoked Catfish & Sweet Plantain Medley (Asun-Style Fish)",
@@ -614,7 +624,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Saut\u00e9 sliced onions and scotch bonnet for 60 seconds.",
           "Toss in shredded ugwu leaves, stir for 90 seconds with a pinch of salt, and take off fire immediately."
         ],
-        "why_this_recipe": "The fastest native vegetable dish in Nigerian home cooking: zero waste, preserves all natural iron and vitamins.",
+        "why_this_recipe": "The fastest native vegetable dish in Nigerian home cooking: zero waste, maximum flavor, and quick preparation.",
         "chef_tips": "Never overcook ugwu; residual heat in the pan will finish the cooking off the stove."
       }
     ],
@@ -731,7 +741,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Add crushed dried chili, ata rodo (scaled to spice level), and tomatoes; fry for 15 minutes until oil turns dark crimson.",
           "Ladle the fiery Aganyin sauce generously over the soft beans and dodo."
         ],
-        "why_this_recipe": "The classic street-food benchmark for Nigerian beans: harnesses slow onion caramelization to recreate authentic Aganyin aroma from everyday pantry staples.",
+        "why_this_recipe": "The classic street-food standard for Nigerian beans: harnesses slow onion caramelization to recreate authentic Aganyin aroma from everyday pantry staples.",
         "chef_tips": "Darkening the onions slowly on medium heat is the exact culinary secret behind authentic Aganyin pepper sauce."
       },
       {
@@ -789,7 +799,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Add ata rodo and cooked honey beans with 3 tablespoons of water.",
           "Simmer for 4 minutes, gently crushing a portion of the beans with a wooden spoon for creamy gravy."
         ],
-        "why_this_recipe": "Takes advantage of pre-cooked honey beans to yield a high-protein, zero-waste hot meal in under 10 minutes without firing up long cooking cycles.",
+        "why_this_recipe": "Takes advantage of pre-cooked honey beans to yield a hearty, zero-waste hot meal in under 10 minutes without firing up long cooking cycles.",
         "chef_tips": "Crushing roughly a quarter of the beans creates a velvety sauce without needing any flour or starch."
       },
       {
@@ -818,7 +828,7 @@ const CLIENT_DEMO_DATA: Record<string, ProcessResponse> = {
           "Pour eggs over warm plantains in the pan, folding gently for 2 minutes until soft.",
           "Serve immediately with hot tea or warm bread."
         ],
-        "why_this_recipe": "Marries the sweet, caramelized notes of ripe plantains with the peppery clove aroma of fresh scent leaves in a protein-rich egg fold.",
+        "why_this_recipe": "Marries the sweet, caramelized notes of ripe plantains with the peppery clove aroma of fresh scent leaves in a savory egg fold.",
         "chef_tips": "Tear scent leaves by hand instead of cutting with a knife to release essential fragrant oils without bruising."
       },
       {
@@ -875,6 +885,10 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProcessResponse | null>(null);
 
+  // Manual ingredient items before photo/analysis (Source: typed, suggested chips, or voice)
+  const [preAnalysisItems, setPreAnalysisItems] = useState<DetectedItem[]>([]);
+  const [typedIngredient, setTypedIngredient] = useState<string>("");
+
   // New ingredient input states for Feature B
   const [newIngredientName, setNewIngredientName] = useState("");
   const [newIngredientQty, setNewIngredientQty] = useState("");
@@ -890,6 +904,8 @@ export default function Home() {
   const [householdSize, setHouseholdSize] = useState<number>(2);
   const [showPreferences, setShowPreferences] = useState(false);
   const [showOpenWeightModal, setShowOpenWeightModal] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<SupportedCity>("Lagos");
+  const [showSavingsInfo, setShowSavingsInfo] = useState<boolean>(false);
 
   // =========================================================================
   // Snap + Speak Voice Intelligence State
@@ -1079,6 +1095,7 @@ export default function Home() {
       cookingFuel,
       tierFilter,
       detectedItems: data?.detected_items ? [...data.detected_items] : [],
+      preAnalysisItems: [...preAnalysisItems],
     });
 
     try {
@@ -1133,7 +1150,7 @@ export default function Home() {
         changeSummaries.push(`${interp.cooking_fuel} stove`);
       }
 
-      // 6. Ingredients additions/removals if data exists
+      // 6. Ingredients additions/removals
       if (data) {
         let currentItems = [...data.detected_items];
 
@@ -1163,6 +1180,31 @@ export default function Home() {
           ...data,
           detected_items: currentItems,
         });
+      } else {
+        // No photo uploaded yet: apply added/removed ingredients directly to preAnalysisItems
+        let currentPre = [...preAnalysisItems];
+        if (interp.remove_ingredients && interp.remove_ingredients.length > 0) {
+          const toRemove = interp.remove_ingredients.map((r) => r.toLowerCase());
+          currentPre = currentPre.filter(
+            (item) => !toRemove.some((rem) => item.name.toLowerCase().includes(rem) || rem.includes(item.name.toLowerCase()))
+          );
+          changeSummaries.push(`Excluded: ${interp.remove_ingredients.join(", ")}`);
+        }
+
+        if (interp.add_ingredients && interp.add_ingredients.length > 0) {
+          for (const addName of interp.add_ingredients) {
+            if (!currentPre.some((ci) => ci.name.toLowerCase() === addName.toLowerCase())) {
+              currentPre.push({
+                name: addName.trim(),
+                category: "Produce",
+                confidence: 1.0,
+                estimated_quantity: "Added via voice",
+              });
+            }
+          }
+          changeSummaries.push(`Added: ${interp.add_ingredients.join(", ")}`);
+        }
+        setPreAnalysisItems(currentPre);
       }
 
       // Handle unclear interpretation: ask user to clarify rather than guessing
@@ -1204,6 +1246,10 @@ export default function Home() {
         ...data,
         detected_items: previousVoiceState.detectedItems,
       });
+    }
+
+    if (previousVoiceState.preAnalysisItems) {
+      setPreAnalysisItems(previousVoiceState.preAnalysisItems);
     }
 
     setPreviousVoiceState(null);
@@ -1351,13 +1397,61 @@ export default function Home() {
     triggerDemo(sampleType);
   };
 
+  // Handlers for manual ingredients before photo upload or when editing
+  const handleAddPreAnalysisItem = (nameToAdd?: string) => {
+    const targetName = (nameToAdd || typedIngredient).trim();
+    if (!targetName) return;
+
+    let category = "Produce";
+    const lower = targetName.toLowerCase();
+    if (lower.includes("fish") || lower.includes("meat") || lower.includes("egg") || lower.includes("chicken") || lower.includes("bean") || lower.includes("catfish") || lower.includes("stockfish")) {
+      category = "Protein";
+    } else if (lower.includes("oil") || lower.includes("rice") || lower.includes("crayfish") || lower.includes("salt") || lower.includes("flour") || lower.includes("iru")) {
+      category = "Pantry";
+    }
+
+    const newItem: DetectedItem = {
+      name: targetName,
+      category,
+      confidence: 1.0,
+      estimated_quantity: "Added manually",
+    };
+
+    if (data) {
+      if (!data.detected_items.some((item) => item.name.toLowerCase() === targetName.toLowerCase())) {
+        setData({
+          ...data,
+          detected_items: [...data.detected_items, newItem],
+        });
+      }
+    } else {
+      if (!preAnalysisItems.some((item) => item.name.toLowerCase() === targetName.toLowerCase())) {
+        setPreAnalysisItems([...preAnalysisItems, newItem]);
+      }
+    }
+
+    setTypedIngredient("");
+    setError(null);
+  };
+
+  const handleRemovePreAnalysisItem = (indexToRemove: number) => {
+    setPreAnalysisItems((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleSubmit = async () => {
-    if (!selectedFile) {
-      setError("Please snap or upload a photo of your kitchen first.");
+    // Check if we have items from ANY source
+    const effectiveItems = selectedFile ? [] : (data?.detected_items || preAnalysisItems);
+
+    if (!selectedFile && effectiveItems.length === 0) {
+      setError("Please add a photo or tell us your ingredients to get started.");
       return;
     }
 
-    if (selectedFile.name.startsWith("provisions_")) {
+    setLoading(true);
+    setError(null);
+
+    // If demo sample selected
+    if (selectedFile?.name.startsWith("provisions_")) {
       const type = selectedFile.name.includes("pantry")
         ? "pantry"
         : selectedFile.name.includes("native")
@@ -1367,33 +1461,90 @@ export default function Home() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setStatusStep("Looking closely at your kitchen photo...");
+    // Source A: Real Photo Upload
+    if (selectedFile) {
+      setStatusStep("Reading your ingredients…");
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const timer1 = setTimeout(() => {
+          setStatusStep("Spotting ingredients across your kitchen…");
+        }, 800);
+
+        const timer2 = setTimeout(() => {
+          setStatusStep("Planning meals from what you have…");
+        }, 1600);
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(
+          `${apiUrl}/api/process?spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server responded with HTTP ${res.status}`);
+        }
+
+        const result: ProcessResponse = await res.json();
+        // If user already typed extra items before upload, merge them
+        if (preAnalysisItems.length > 0) {
+          const merged = [...result.detected_items];
+          for (const extra of preAnalysisItems) {
+            if (!merged.some((m) => m.name.toLowerCase() === extra.name.toLowerCase())) {
+              merged.push(extra);
+            }
+          }
+          result.detected_items = merged;
+        }
+
+        setData(result);
+        setActiveTab("quick");
+        setCompletedSteps({});
+        setCheckedShoppingItems(new Set());
+        scrollToResults();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "An unexpected network error occurred.";
+        setError(
+          message.includes("Failed to fetch")
+            ? "FastAPI server unreachable at http://localhost:8000. Start backend with: uvicorn app.main:app --reload --port 8000"
+            : message
+        );
+      } finally {
+        setLoading(false);
+        setStatusStep("");
+      }
+      return;
+    }
+
+    // Source B & C: Ingredients from chips or voice without photo
+    setStatusStep("Reading your ingredients…");
+    const timerStage = setTimeout(() => {
+      setStatusStep("Planning meals from your ingredients…");
+    }, 900);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const timer1 = setTimeout(() => {
-        setStatusStep("Spotting ingredients across your kitchen...");
-      }, 900);
-
-      const timer2 = setTimeout(() => {
-        setStatusStep("Finding Nigerian meals to match your ingredients...");
-      }, 1800);
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(
-        `${apiUrl}/api/process?spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const res = await fetch(`${apiUrl}/api/recipes/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          detected_items: effectiveItems,
+          sample_type: null,
+          is_demo: false,
+          spice_level: spiceLevel,
+          cooking_fuel: cookingFuel,
+        }),
+      });
 
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      clearTimeout(timerStage);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -1407,7 +1558,8 @@ export default function Home() {
       setCheckedShoppingItems(new Set());
       scrollToResults();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An unexpected network error occurred.";
+      clearTimeout(timerStage);
+      const message = err instanceof Error ? err.message : "Recipe planning failed.";
       setError(
         message.includes("Failed to fetch")
           ? "FastAPI server unreachable at http://localhost:8000. Start backend with: uvicorn app.main:app --reload --port 8000"
@@ -1566,7 +1718,7 @@ Instructions:
 ${recipe.instructions.map((step, sIdx) => `${sIdx + 1}. ${step}`).join("\n")}
 
 Chef's Pro Tip: ${recipe.chef_tips || "Enjoy hot!"}
-— Generated by ChopSnap (Snap your kitchen. Know what to chop.)`;
+— Generated by ChopSnap (ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.)`;
 
     navigator.clipboard.writeText(text);
     setCopiedRecipeIndex(idx);
@@ -1588,6 +1740,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
   const resetAll = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
+    setPreAnalysisItems([]);
+    setTypedIngredient("");
+    setShowSavingsInfo(false);
     setData(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1596,6 +1751,25 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     }
   };
 
+  const NIGERIAN_SUGGESTIONS = [
+    "Fresh Ugwu",
+    "Scotch Bonnet (Ata Rodo)",
+    "Plum Tomatoes",
+    "Ripe Plantains",
+    "Fresh Eggs",
+    "Smoked Catfish",
+    "Honey Beans",
+    "White Rice",
+    "Red Onions",
+    "Pure Red Palm Oil",
+  ];
+
+  const canSubmit = Boolean(
+    selectedFile ||
+    (data && data.detected_items && data.detected_items.length > 0) ||
+    preAnalysisItems.length > 0
+  );
+
   const quickRecipes = data?.recipes.filter((r) => r.meal_type === "quick") || [];
   const properRecipes = data?.recipes.filter((r) => r.meal_type !== "quick") || [];
 
@@ -1603,6 +1777,48 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     if (tierFilter === "all") return true;
     return r.financial_tier === tierFilter;
   });
+
+  const activeDisplayedRecipes =
+    activeTab === "quick"
+      ? displayedRecipes
+      : activeTab === "proper"
+      ? displayedRecipes
+      : (data?.recipes || []);
+
+  const userIngredientsList = data?.detected_items || [];
+  const totalUserIngredients = userIngredientsList.length;
+
+  // Compute used ingredients across recipe fridge items, missing items, and instructions
+  const usedUserIngredients = userIngredientsList.filter((item) =>
+    isIngredientUsedInRecipes(item.name, activeDisplayedRecipes)
+  );
+
+  const notUsedUserIngredients = userIngredientsList.filter(
+    (item) => !isIngredientUsedInRecipes(item.name, activeDisplayedRecipes)
+  );
+
+  const ingredientsUsedPercent =
+    totalUserIngredients > 0
+      ? Math.round((usedUserIngredients.length / totalUserIngredients) * 100)
+      : 0;
+
+  // Compute value of ingredients you're using in naira from prices.json
+  let ingredientValueNaira = 0;
+  let pricedItemsCount = 0;
+  let unpricedItemsCount = 0;
+
+  usedUserIngredients.forEach((item) => {
+    const price = getIngredientPrice(item.name, selectedCity, cityPricesData);
+    if (price !== null && price > 0) {
+      ingredientValueNaira += price;
+      pricedItemsCount++;
+    } else {
+      unpricedItemsCount++;
+    }
+  });
+
+  const hasSavingsData = pricedItemsCount > 0;
+  const somePricesUnavailable = unpricedItemsCount > 0;
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col justify-between selection:bg-[#1F5C3A] selection:text-white overflow-x-hidden">
@@ -1748,7 +1964,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             </h1>
 
             <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-snug font-sans">
-              Snap your fridge, pantry shelf, or counter and get authentic Nigerian dishes matched to your ingredients and budget.
+              ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.
             </p>
 
             {/* Streamlined Upload Card */}
@@ -2033,6 +2249,119 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 </div>
               )}
 
+              {/* Visible "Add ingredient" box + Quick Nigerian Suggestions */}
+              <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <Salad className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                    <span>Kitchen Ingredients</span>
+                    {(data ? data.detected_items.length : preAnalysisItems.length) > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#1F5C3A]/15 text-[#1F5C3A] dark:text-[#86EFAC] font-bold">
+                        {data ? data.detected_items.length : preAnalysisItems.length}
+                      </span>
+                    )}
+                  </label>
+                  {preAnalysisItems.length > 0 && !data && (
+                    <button
+                      type="button"
+                      onClick={() => setPreAnalysisItems([])}
+                      className="text-[10px] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer font-medium"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {/* Active Chips (Before photo analysis) */}
+                {preAnalysisItems.length > 0 && !data && (
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-lg bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                    {preAnalysisItems.map((item, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#1F5C3A]/10 text-[#1F5C3A] dark:bg-[#287A4D]/25 dark:text-[#86EFAC] border border-[#1F5C3A]/20"
+                      >
+                        <span>{item.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePreAnalysisItem(idx)}
+                          className="hover:text-rose-500 text-[var(--text-muted)] p-0.5 rounded cursor-pointer"
+                          aria-label={`Remove ${item.name}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Text input with Add button */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={typedIngredient}
+                    onChange={(e) => setTypedIngredient(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && typedIngredient.trim()) {
+                        e.preventDefault();
+                        handleAddPreAnalysisItem(typedIngredient);
+                        setTypedIngredient("");
+                      }
+                    }}
+                    placeholder="Type ingredient (e.g. Ugwu, Smoked Fish, Beans)..."
+                    className="flex-1 text-xs sm:text-sm px-3 py-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#1F5C3A]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typedIngredient.trim()) {
+                        handleAddPreAnalysisItem(typedIngredient);
+                        setTypedIngredient("");
+                      }
+                    }}
+                    disabled={!typedIngredient.trim()}
+                    className={`min-h-[34px] px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                      typedIngredient.trim()
+                        ? "bg-[#1F5C3A] hover:bg-[#17472D] text-white shadow-sm active:scale-95"
+                        : "bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] cursor-not-allowed opacity-60"
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                {/* Suggestions for common Nigerian items */}
+                <div>
+                  <p className="text-[11px] text-[var(--text-muted)] mb-1.5 font-medium">Quick Nigerian staples (tap to add):</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {NIGERIAN_SUGGESTIONS.map((sug) => {
+                      const isAdded = data
+                        ? data.detected_items.some((it) => it.name.toLowerCase() === sug.toLowerCase())
+                        : preAnalysisItems.some((it) => it.name.toLowerCase() === sug.toLowerCase());
+                      return (
+                        <button
+                          key={sug}
+                          type="button"
+                          onClick={() => handleAddPreAnalysisItem(sug)}
+                          className={`text-[11px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                            isAdded
+                              ? "bg-[#1F5C3A]/15 text-[#1F5C3A] dark:text-[#86EFAC] border-[#1F5C3A]/30 font-semibold"
+                              : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[#1F5C3A]/50 hover:bg-[var(--bg-surface-hover)]"
+                          }`}
+                        >
+                          {isAdded ? (
+                            <Check className="w-3 h-3 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                          ) : (
+                            <Plus className="w-3 h-3 text-[var(--text-muted)]" />
+                          )}
+                          <span>{sug}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
               {/* Preferences Knob */}
               <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)]">
                 <button
@@ -2133,9 +2462,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <div className="mt-4">
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !selectedFile}
+                  disabled={loading || !canSubmit}
                   className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all duration-200 shadow-md cursor-pointer ${
-                    loading || !selectedFile
+                    loading || !canSubmit
                       ? "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-subtle)]"
                       : "bg-[#1F5C3A] hover:bg-[#17472D] active:bg-[#123823] dark:bg-[#287A4D] dark:hover:bg-[#31945D] text-white shadow-[#1F5C3A]/20 hover:shadow-lg active:scale-[0.98]"
                   }`}
@@ -2152,15 +2481,30 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     </>
                   )}
                 </button>
+                {!canSubmit && !loading && (
+                  <p className="text-xs text-[var(--text-muted)] text-center mt-2 font-normal">
+                    Add a photo or tell us your ingredients to get started.
+                  </p>
+                )}
               </div>
 
               {error && (
-                <div className="mt-3.5 p-3 rounded-xl bg-[#FDEEEC] dark:bg-[#2E1816] border border-[#F5C2BC] dark:border-[#5C2A25] text-[#A6281E] dark:text-[#FCA5A5] text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-[#D94F04] shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <p className="font-semibold">Notice</p>
-                    <p className="leading-relaxed">{error}</p>
+                <div className="mt-3.5 p-3 rounded-xl bg-[#FDEEEC] dark:bg-[#2E1816] border border-[#F5C2BC] dark:border-[#5C2A25] text-[#A6281E] dark:text-[#FCA5A5] text-xs flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-[#D94F04] shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-semibold">Notice</p>
+                      <p className="leading-relaxed">{error}</p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="px-3 py-1.5 rounded-lg bg-[#D94F04] hover:bg-[#BF4300] text-white font-semibold text-xs shrink-0 cursor-pointer active:scale-95 transition-all shadow-sm flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Try again</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -2202,7 +2546,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   </div>
                   <div className="p-2.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10">
                     <p className="text-xs text-[#4ADE80] font-semibold">Fresh Ugwu</p>
-                    <p className="text-xs text-white/80">Vitamin rich greens</p>
+                    <p className="text-xs text-white/80">Fresh native greens</p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 col-span-2 sm:col-span-1">
                     <p className="text-xs text-[#FDBA74] font-semibold">Smoked Titus</p>
@@ -2284,7 +2628,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 Check What You Have
               </h3>
               <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-                We spot your proteins, produce, and staples. You can add or remove items to customize the list.
+                We spot your fish, meats, produce, and staples. You can add or remove items to customize the list.
               </p>
             </div>
 
@@ -2630,6 +2974,177 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* ==========================================================
+                  REAL "INGREDIENTS USED" & "VALUE OF INGREDIENTS YOU'RE USING" SUMMARY
+                  - Real % computed in code from user's confirmed list vs displayed recipes
+                  - Value of ingredients you're using from prices.json for selected city
+                  - "some prices unavailable" if unpriced, or hidden if not enough data
+                  - "Not used yet" list of leftovers
+                  - "How we calculate this" plain-English formula breakdown
+                  - Purely ingredients and money (no nutrition/health/calories)
+                 ========================================================== */}
+              <div className="chop-card p-5 sm:p-6 shadow-sm border border-[var(--border-subtle)] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                      <span>Ingredients Used &amp; Value of Ingredients You&apos;re Using</span>
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      Calculated from your confirmed kitchen list and the recipes currently displayed.
+                    </p>
+                  </div>
+
+                  {/* City Selector */}
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1 font-medium">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Market City:</span>
+                    </span>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value as SupportedCity)}
+                      className="text-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-lg px-2.5 py-1.5 outline-none cursor-pointer focus:border-[#1F5C3A] font-semibold"
+                    >
+                      {SUPPORTED_CITIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Metric 1: Ingredients Used % */}
+                  <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[var(--text-secondary)] font-medium">Ingredients Used</span>
+                      <span className="font-bold text-[#1F5C3A] dark:text-[#86EFAC] text-sm sm:text-base">
+                        {ingredientsUsedPercent}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-[var(--border-subtle)] h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#1F5C3A] dark:bg-[#86EFAC] h-full transition-all duration-500 rounded-full"
+                        style={{ width: `${Math.min(ingredientsUsedPercent, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {usedUserIngredients.length} of {totalUserIngredients} unique ingredients from your kitchen used in these recipes.
+                    </p>
+                  </div>
+
+                  {/* Metric 2: Value of ingredients you're using */}
+                  <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[var(--text-secondary)] font-medium">Value of ingredients you&apos;re using</span>
+                      {hasSavingsData && (
+                        <span className="font-bold text-[#D94F04] dark:text-[#FB923C] text-sm sm:text-base">
+                          ~₦{ingredientValueNaira.toLocaleString()} (estimate)
+                        </span>
+                      )}
+                    </div>
+                    {hasSavingsData ? (
+                      <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                        <span>Based on {selectedCity} prices</span>
+                        {somePricesUnavailable && (
+                          <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                            some prices unavailable
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--text-muted)] italic">
+                        Price estimates unavailable for these specific items.
+                      </p>
+                    )}
+                    <p className="text-[11px] text-[var(--text-muted)]">
+                      Approximate market value of what you already have that is used in these recipes (estimate).
+                    </p>
+                  </div>
+                </div>
+
+                {/* "Not used yet" Section */}
+                <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      {notUsedUserIngredients.length > 0
+                        ? `Not used yet (${notUsedUserIngredients.length})`
+                        : "All ingredients used"}
+                    </span>
+                    {notUsedUserIngredients.length > 0 && (
+                      <span className="text-[11px] text-[var(--text-muted)]">
+                        Remaining in your kitchen for other meals
+                      </span>
+                    )}
+                  </div>
+
+                  {notUsedUserIngredients.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {notUsedUserIngredients.map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span>{item.name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#1F5C3A] dark:text-[#86EFAC] font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Every single ingredient from your confirmed kitchen list is used in this meal plan!</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* "How we calculate this" Disclosure */}
+                <div className="pt-2 border-t border-[var(--border-subtle)]">
+                  <button
+                    type="button"
+                    onClick={() => setShowSavingsInfo(!showSavingsInfo)}
+                    className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Info className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                    <span className="underline decoration-dotted underline-offset-2 font-medium">
+                      How we calculate this
+                    </span>
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform duration-200 shrink-0 ${
+                        showSavingsInfo ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {showSavingsInfo && (
+                    <div className="mt-2.5 p-3.5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2.5 text-xs text-[var(--text-secondary)]">
+                      <div>
+                        <p className="font-semibold text-[var(--text-primary)] mb-0.5">
+                          1. Ingredients used % formula
+                        </p>
+                        <p className="text-[11px] leading-relaxed">
+                          <code>(Unique kitchen ingredients used in displayed recipes ÷ Total confirmed kitchen ingredients) × 100</code>.
+                          We examine every ingredient in your confirmed kitchen list and check whether it appears in the ingredient lines, missing items, or preparation steps of any recipe currently displayed.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-[var(--text-primary)] mb-0.5">
+                          2. Value of ingredients you&apos;re using formula
+                        </p>
+                        <p className="text-[11px] leading-relaxed">
+                          <code>Sum of approximate local market prices for all used ingredients in {selectedCity}</code>.
+                          This is the approximate market value of what you already have, not a comparison against a specific purchase.
+                          Prices are rough estimates and have not been formally reviewed. They will be updated and verified regularly. If an ingredient has no price in our table, it is left out of the sum and marked &quot;some prices unavailable&quot;. If there is not enough price data, the value figure is hidden rather than guessed.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3139,6 +3654,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             </div>
             <span className="text-[var(--text-primary)] font-semibold">ChopSnap</span>
             <span className="text-[var(--text-muted)]">•</span>
+            <span className="hidden md:inline">ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.</span>
+            <span className="text-[var(--text-muted)] hidden md:inline">•</span>
             <span>Meta Global AI Hackathon (Indie Track)</span>
           </div>
           <div className="flex items-center justify-center gap-3 text-xs">

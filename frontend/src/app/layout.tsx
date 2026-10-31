@@ -21,7 +21,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "ChopSnap — Snap your kitchen. Know what to chop.",
   description:
-    "Snap a photo of your kitchen and get Nigerian meals you can cook with what you already have, matched to your budget.",
+    "ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.",
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",

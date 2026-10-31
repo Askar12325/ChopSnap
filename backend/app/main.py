@@ -5,10 +5,7 @@ from .api.routes import router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description=(
-        "ChopSnap API for Meta Global AI Developer Hackathon. "
-        "Powered by Meta's open-weight Muse Glimmer (30B) model for Nigerian culinary optimization."
-    ),
+    description="ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.",
     version="1.0.0",
 )
 

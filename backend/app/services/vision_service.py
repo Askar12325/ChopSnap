@@ -11,7 +11,7 @@ from ..models.schemas import DetectedItem
 
 logger = logging.getLogger(__name__)
 
-VISION_PROMPT = """Analyze this household food photograph carefully (whether it is a refrigerator interior, kitchen pantry, countertop, food basket, or dining prep surface). Identify every distinct food item, ingredient, raw vegetable, protein, dairy item, condiment, leftover, and staple visible.
+VISION_PROMPT = """Analyze this household food photograph carefully (whether it is a refrigerator interior, kitchen pantry, countertop, food basket, or dining prep surface). Identify every distinct food item, ingredient, raw vegetable, meat, fish, egg, dairy item, condiment, leftover, and staple visible.
 
 Format your output strictly as a JSON array of objects with the following schema:
 [

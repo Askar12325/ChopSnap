@@ -28,6 +28,12 @@ CRITICAL RECIPE STRUCTURE:
 5. INGREDIENTS MAPPING:
    - fridge_ingredients_used: list ONLY the detected items actually utilized in the dish.
    - missing_ingredients_needed: list ONLY genuinely missing essential additions. Do NOT list assumed staples (salt, water, vegetable oil, seasoning cubes).
+6. STRICT NON-HEALTH / NON-MEDICAL MANDATE:
+   - You are a culinary and household budget assistant ONLY.
+   - NEVER give health, medical, wellness, weight, fitness, or nutrition advice.
+   - NEVER mention or claim health benefits (e.g. do NOT say "nutrient-dense", "vitamin-rich", "cleansing", "boosts immunity", or "healthy fats").
+   - NEVER include calorie counts, macro breakdowns, or nutrient numbers.
+   - Focus exclusively on taste, texture, authentic Nigerian cooking techniques, and budget efficiency.
 
 Output Schema (return strictly valid JSON matching this schema):
 {
@@ -125,7 +131,7 @@ RECIPE_COLLECTIONS = [
                     "Add chilled cooked rice, breaking up lumps with a wooden spoon over brisk heat for 5 minutes.",
                     "Fold in shredded fresh ugwu leaves and fried dodo cubes during the final 90 seconds so greens stay vibrant and crisp.",
                 ],
-                why_this_recipe="Resourcefully repurposes day-old chilled rice, using sliced fresh ugwu leaves at the very end to preserve vitamins and vivid green color.",
+                why_this_recipe="Resourcefully repurposes day-old chilled rice, folding in sliced fresh ugwu leaves at the very end to preserve their crisp texture and vivid green color.",
                 chef_tips="Chilled rice grains are slightly dehydrated, meaning they absorb savory seasoned pan oils without turning mushy.",
             ),
             # 3. Quick Meal • Budget
@@ -153,7 +159,7 @@ RECIPE_COLLECTIONS = [
                     "Crack eggs into pan, lower flame to medium, and stir gently for 2 minutes until soft fluffy curds form.",
                     "Serve steaming hot with bread, rice, or yam.",
                 ],
-                why_this_recipe="Zero-waste quick protein meal prepared in under 10 minutes using only staple eggs, onions, and scotch bonnet with zero extra shopping required.",
+                why_this_recipe="Zero-waste quick meal prepared in under 10 minutes using only staple eggs, onions, and scotch bonnet with zero extra shopping required.",
                 chef_tips="Sautéing onions until golden first caramelizes natural sugars, giving savory richness without needing butter.",
             ),
             # 4. Quick Meal • Comfortable
@@ -257,7 +263,7 @@ RECIPE_COLLECTIONS = [
                     "Serve with thick golden fried sweet plantain fingers or swallow.",
                 ],
                 why_this_recipe="A revered Nigerian classic: pairs slow-steeped stockfish collagen with whole smoked catfish and fresh ugwu in unbleached palm oil for deep ancestral umami.",
-                chef_tips="Turning off the heat right as ugwu is folded keeps the leaves vibrant emerald green and crisp with zero vitamin loss.",
+                chef_tips="Turning off the heat right as ugwu is folded keeps the leaves vibrant emerald green and tender-crisp.",
             ),
             # 2. Proper Cooking • Budget
             Recipe(
@@ -291,7 +297,7 @@ RECIPE_COLLECTIONS = [
             # 3. Quick Meal • Budget
             Recipe(
                 title="Native Flash-Wilted Ugwu & Palm Oil Scramble over Leftover Rice",
-                description="Fast nutrient-dense native skillet: fresh shredded pumpkin leaves flash-sizzled in aromatic palm oil with beaten eggs and scotch bonnet over warm leftover rice.",
+                description="Fast native skillet: fresh shredded pumpkin leaves flash-sizzled in aromatic palm oil with beaten eggs and scotch bonnet over warm leftover rice.",
                 meal_type="quick",
                 financial_tier="budget",
                 estimated_cost_tier="~₦700 (Everyday Budget)",
@@ -314,8 +320,8 @@ RECIPE_COLLECTIONS = [
                     "Pour in whisked eggs, swirl gently, then fold in shredded ugwu leaves.",
                     "Serve piping hot over reheated leftover white rice.",
                 ],
-                why_this_recipe="Rescues fresh ugwu leaves with a flash 90-second palm oil sizzle, locking in chlorophyll while coating leftover rice with rich savory fats.",
-                chef_tips="Cooking ugwu for under 90 seconds preserves its vivid chlorophyll green and crisp vitamin crunch.",
+                why_this_recipe="Rescues fresh ugwu leaves with a flash 90-second palm oil sizzle, locking in vibrant color while coating leftover rice with rich savory sauce.",
+                chef_tips="Cooking ugwu for under 90 seconds preserves its vivid green color and crisp vegetable crunch.",
             ),
             # 4. Quick Meal • Comfortable
             Recipe(
@@ -368,7 +374,7 @@ RECIPE_COLLECTIONS = [
                     "Sauté sliced onions and scotch bonnet for 60 seconds.",
                     "Toss in shredded ugwu leaves, stir for 90 seconds with a pinch of salt, and take off fire immediately.",
                 ],
-                why_this_recipe="The fastest native vegetable dish in Nigerian home cooking: zero waste, preserves all natural iron and vitamins.",
+                why_this_recipe="The fastest native vegetable dish in Nigerian home cooking: zero waste, maximum flavor, and quick preparation.",
                 chef_tips="Never overcook ugwu; residual heat in the pan will finish the cooking off the stove.",
             ),
         ],
@@ -411,7 +417,7 @@ RECIPE_COLLECTIONS = [
                     "Add crushed dried chili, ata rodo (scaled to spice level), and tomatoes; fry for 15 minutes until oil turns dark crimson.",
                     "Ladle the fiery Aganyin sauce generously over the soft beans and dodo.",
                 ],
-                why_this_recipe="The classic street-food benchmark for Nigerian beans: harnesses slow onion caramelization to recreate authentic Aganyin aroma from everyday pantry staples.",
+                why_this_recipe="The classic street-food standard for Nigerian beans: harnesses slow onion caramelization to recreate authentic Aganyin aroma from everyday pantry staples.",
                 chef_tips="Darkening the onions slowly on medium heat is the exact culinary secret behind authentic Aganyin pepper sauce.",
             ),
             # 2. Proper Cooking • Comfortable
@@ -469,7 +475,7 @@ RECIPE_COLLECTIONS = [
                     "Add ata rodo and cooked honey beans with 3 tablespoons of water.",
                     "Simmer for 4 minutes, gently crushing a portion of the beans with a wooden spoon for creamy gravy.",
                 ],
-                why_this_recipe="Takes advantage of pre-cooked honey beans to yield a high-protein, zero-waste hot meal in under 10 minutes without firing up long cooking cycles.",
+                why_this_recipe="Takes advantage of pre-cooked honey beans to yield a hearty, zero-waste hot meal in under 10 minutes without firing up long cooking cycles.",
                 chef_tips="Crushing roughly a quarter of the beans creates a velvety sauce without needing any flour or starch.",
             ),
             # 4. Quick Meal • Comfortable
@@ -497,7 +503,7 @@ RECIPE_COLLECTIONS = [
                     "Pour eggs over warm plantains in the pan, folding gently for 2 minutes until soft.",
                     "Serve immediately with hot tea or warm bread.",
                 ],
-                why_this_recipe="Marries the sweet, caramelized notes of ripe plantains with the peppery clove aroma of fresh scent leaves in a protein-rich egg fold.",
+                why_this_recipe="Marries the sweet, caramelized notes of ripe plantains with the peppery clove aroma of fresh scent leaves in a savory egg fold.",
                 chef_tips="Tear scent leaves by hand instead of cutting with a knife to release essential fragrant oils without bruising.",
             ),
             # 5. Quick Meal • Budget
@@ -667,7 +673,8 @@ class RecipeService:
             + "\n".join(item_summary)
             + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}.\n"
             + "Please formulate 5 authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
-            + "containing 2-3 Quick Meals (<=20m) and 2-3 Proper Cooking dishes, plus a minimal shopping list."
+            + "containing 2-3 Quick Meals (<=20m) and 2-3 Proper Cooking dishes, plus a minimal shopping list. "
+            + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
         )
 
         url = f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/chat/completions"
@@ -706,7 +713,8 @@ class RecipeService:
             + "\n".join(item_summary)
             + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}.\n"
             + "Please formulate 5 authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
-            + "containing 2-3 Quick Meals (<=20m) and 2-3 Proper Cooking dishes, plus a minimal shopping list."
+            + "containing 2-3 Quick Meals (<=20m) and 2-3 Proper Cooking dishes, plus a minimal shopping list. "
+            + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
         )
 
         url = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat"
@@ -812,7 +820,8 @@ class RecipeService:
             "1. Missing or unmentioned fields MUST be null (for budget_naira, servings, spice_level, cooking_fuel) or empty list [] (for dietary, add_ingredients, remove_ingredients). NEVER GUESS.\n"
             "2. For budget, extract the numeric value in Naira (e.g. '3k', '3000 naira', 'three thousand' -> 3000).\n"
             "3. For servings, extract the portion count (e.g. 'for me and my wife' -> 2, 'four people' -> 4, 'eniyan meta' -> 3).\n"
-            "4. Return ONLY valid JSON, with no markdown code blocks and no preamble."
+            "4. Return ONLY valid JSON, with no markdown code blocks and no preamble.\n"
+            "5. You are a cooking and budget assistant only. Never give health, medical, wellness, or nutrition advice, and never calculate or output calories or nutrients."
         )
 
         user_content = f"Spoken Transcript ({language}): \"{transcript}\""
