@@ -1,19 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { MotionProvider } from "../components/MotionProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-serif",
+const fraunces = Fraunces({
+  variable: "--font-heading",
   subsets: ["latin"],
   display: "swap",
 });
@@ -52,9 +49,11 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#1F5C3A] selection:text-white`}
+        className={`${plusJakarta.variable} ${fraunces.variable} font-sans antialiased min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#D9381E] selection:text-white`}
       >
-        {children}
+        <MotionProvider>
+          {children}
+        </MotionProvider>
       </body>
     </html>
   );

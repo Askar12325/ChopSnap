@@ -43,6 +43,11 @@ import {
 } from "lucide-react";
 import cityPricesData from "../data/prices.json";
 import {
+  Button,
+  StepHeader,
+  ProgressDots,
+} from "../components/ui";
+import {
   isIngredientUsedInRecipes,
   getIngredientPrice,
 } from "../utils/matching";
@@ -162,15 +167,15 @@ function RecipeHeroImage({ recipe }: { recipe: Recipe }) {
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#2B1B12] via-[#3D2517] to-[#1F5C3A] flex flex-col justify-between p-4 sm:p-5 text-white">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+            <span className="text-sm font-semibold px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm">
               {recipe.meal_type === "quick" ? "Quick Meal (≤20m)" : "Proper Cooking"}
             </span>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+            <span className="text-sm font-semibold px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm">
               {recipe.prep_time_minutes + recipe.cook_time_minutes}m total
             </span>
           </div>
           <div>
-            <span className="text-xs font-semibold text-[#FB923C] uppercase tracking-wider block mb-1">
+            <span className="text-sm font-semibold text-[#FB923C] uppercase tracking-wider block mb-1">
               Nigerian Kitchen Craft
             </span>
             <h4 className="font-serif text-lg sm:text-xl font-normal leading-tight text-[#FFF8EF]">
@@ -934,6 +939,32 @@ export default function Home() {
   // Real Progress Stages (Vision vs Recipe Pipeline)
   const [pipelinePhase, setPipelinePhase] = useState<"vision" | "recipes">("vision");
   const [progressStage, setProgressStage] = useState<number>(1);
+
+  // Real Backend Health Check (/api/health)
+  const [isBackendHealthy, setIsBackendHealthy] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkBackendHealth = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/api/health`, { method: "GET", cache: "no-store" });
+        if (isMounted) {
+          setIsBackendHealthy(res.ok);
+        }
+      } catch {
+        if (isMounted) {
+          setIsBackendHealthy(false);
+        }
+      }
+    };
+    checkBackendHealth();
+    const timer = setInterval(checkBackendHealth, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   // =========================================================================
   // Snap + Speak Voice Intelligence State
@@ -2050,31 +2081,42 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               />
             </button>
             <div className="hidden md:block min-w-0 pl-3 border-l border-[var(--border-subtle)]">
-              <p className="text-xs text-[var(--text-muted)] font-medium truncate">
+              <p className="text-sm text-[var(--text-secondary)] font-medium truncate">
                 Snap your kitchen. Know what to chop.
               </p>
             </div>
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] shadow-sm">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Real Health Badge */}
+            <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-sm text-[var(--text-secondary)] shadow-sm min-h-[44px]">
               {data ? (
                 data.is_demo ? (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-[#E8590C]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#F28A1B]" />
                     <span className="font-semibold text-[var(--text-primary)]">Curated Demo Mode</span>
                   </>
                 ) : (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-[#1F5C3A] dark:bg-[#86EFAC] animate-pulse" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#1F6B3B] dark:bg-[#86EFAC] animate-pulse" />
                     <span className="font-semibold text-[var(--text-primary)]">Live Kitchen Analysis</span>
                   </>
                 )
+              ) : isBackendHealthy === true ? (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#1F6B3B] dark:bg-[#86EFAC]" />
+                  <span className="font-semibold text-[var(--text-primary)]">AI Ready</span>
+                </>
+              ) : isBackendHealthy === false ? (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#D9381E]" />
+                  <span className="font-semibold text-[#D9381E] dark:text-[#FCA5A5]">Offline</span>
+                </>
               ) : (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-[#1F5C3A] dark:bg-[#86EFAC]" />
-                  <span>AI Ready</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[var(--border-strong)] animate-pulse" />
+                  <span className="text-[var(--text-muted)]">Checking...</span>
                 </>
               )}
             </div>
@@ -2082,18 +2124,18 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <button
               onClick={toggleTheme}
               type="button"
-              className="min-h-[42px] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all flex items-center gap-1.5 text-xs font-semibold shadow-sm active:scale-95 cursor-pointer"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all flex items-center gap-2 text-sm font-semibold shadow-sm active:scale-95 cursor-pointer"
               title={isDark ? "Switch to light theme" : "Switch to dark theme"}
               aria-label="Toggle theme"
             >
               {isDark ? (
                 <>
-                  <Sun className="w-4 h-4 text-[#FB923C]" />
+                  <Sun className="w-4 h-4 text-[#F28A1B]" />
                   <span className="hidden sm:inline">Light</span>
                 </>
               ) : (
                 <>
-                  <Moon className="w-4 h-4 text-[#1F5C3A]" />
+                  <Moon className="w-4 h-4 text-[var(--text-secondary)]" />
                   <span className="hidden sm:inline">Dark</span>
                 </>
               )}
@@ -2102,10 +2144,10 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <button
               onClick={() => setShowOpenWeightModal(true)}
               type="button"
-              className="min-h-[42px] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] shadow-sm active:scale-95 cursor-pointer"
+              className="min-h-[44px] text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] shadow-sm active:scale-95 cursor-pointer"
               title="Why Open-Weight Models?"
             >
-              <Info className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC]" />
+              <Info className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC]" />
               <span className="hidden sm:inline">Why Open-Weight?</span>
             </button>
           </div>
@@ -2119,10 +2161,10 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-[#1F5C3A] dark:bg-[#86EFAC] shrink-0 animate-pulse" />
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] truncate">
+                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
                   {selectedFile?.name || "Kitchen Ingredients Scan"}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] truncate hidden sm:block">
+                <p className="text-sm text-[var(--text-secondary)] truncate hidden sm:block">
                   {data.detected_items.length} ingredients active • {data.recipes.length} recipes matched
                 </p>
               </div>
@@ -2132,19 +2174,19 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] hover:opacity-90 transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--text-primary)] hover:opacity-90 transition-all text-sm font-semibold flex items-center gap-2 shadow-sm active:scale-95 cursor-pointer"
               >
-                <Camera className="w-3.5 h-3.5 shrink-0" />
+                <Camera className="w-4 h-4 shrink-0 text-[#D9381E]" />
                 <span>Change photo</span>
               </button>
 
               <button
                 type="button"
                 onClick={resetAll}
-                className="min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-muted)] hover:text-[#D94F04] transition-all text-xs font-medium flex items-center gap-1 active:scale-95 cursor-pointer"
+                className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[#D9381E] transition-all text-sm font-semibold flex items-center gap-2 active:scale-95 cursor-pointer"
                 title="Start fresh scan"
               >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                <RotateCcw className="w-4 h-4 shrink-0" />
                 <span className="hidden sm:inline">New scan</span>
               </button>
             </div>
@@ -2160,12 +2202,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
           {/* Left Column: Primary Action */}
           <div className="lg:col-span-6 space-y-4 sm:space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs font-semibold shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-[#E8590C] shrink-0" />
-              <span>Snap your kitchen. Know what to chop.</span>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-normal text-[var(--text-primary)] leading-[1.15] tracking-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-semibold text-[var(--text-primary)] leading-[1.15] tracking-tight">
               Cook celebratory Nigerian meals from what’s{" "}
               <span className="italic text-[#1F5C3A] dark:text-[#86EFAC]">already in your kitchen.</span>
             </h1>
@@ -2201,7 +2238,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       <p className="text-sm font-semibold text-[var(--text-primary)] mb-0.5">
                         Snap fridge, shelf, or counter
                       </p>
-                      <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                      <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                         Tap photo or drag & drop here
                       </p>
                     </div>
@@ -2209,11 +2246,11 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     {/* Speak Mic Action Box (1 col) */}
                     <div className="sm:col-span-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 flex flex-col items-center justify-between text-center relative overflow-hidden min-h-[140px]">
                       <div className="w-full flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                        <span className="text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                           Speak
                         </span>
                         {isListening && (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-500 animate-pulse">
+                          <span className="flex items-center gap-1 text-sm font-semibold text-rose-500 animate-pulse">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                             {recordingSeconds}s
                           </span>
@@ -2227,7 +2264,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-md cursor-pointer active:scale-90 ${
                             isListening
                               ? "bg-rose-600 hover:bg-rose-700 text-white animate-bounce shadow-rose-600/30 ring-4 ring-rose-500/20"
-                              : "bg-[#1F5C3A] hover:bg-[#17472D] text-white shadow-[#1F5C3A]/25 hover:scale-105"
+                              : "bg-[#1F6B3B] hover:bg-[#18552E] text-white shadow-[#1F6B3B]/25 hover:scale-105"
                           }`}
                           title={isListening ? "Press to stop recording" : "Press to start speaking instructions"}
                           aria-label={isListening ? "Stop listening" : "Start voice input"}
@@ -2240,21 +2277,21 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         </div>
                       )}
 
-                      <p className="text-[11px] font-medium text-[var(--text-secondary)] leading-tight">
+                      <p className="text-sm font-medium text-[var(--text-secondary)] leading-tight">
                         {isListening ? "Listening (tap stop)" : voiceSupported ? "Tap to speak" : "Type below"}
                       </p>
                     </div>
                   </div>
 
                   {/* Language Selector + Voice Guidance */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-[var(--text-muted)]">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] font-medium">Voice Language:</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-sm text-[var(--text-secondary)]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">Voice Language:</span>
                       <select
                         value={voiceLang}
                         onChange={(e) => setVoiceLang(e.target.value)}
                         disabled={isListening}
-                        className="text-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-lg px-2 py-1 outline-none cursor-pointer focus:border-[#1F5C3A]"
+                        className="min-h-[44px] text-sm bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-xl px-3 py-2 outline-none cursor-pointer focus:border-[#D9381E]"
                       >
                         <option value="en-NG">English (en-NG)</option>
                         <option value="en-NG">Nigerian Pidgin (en-NG)</option>
@@ -2263,29 +2300,29 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         <option value="ig-NG">Igbo (ig-NG) [Beta]</option>
                       </select>
                       {(voiceLang === "yo-NG" || voiceLang === "ha-NG" || voiceLang === "ig-NG") && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#E8590C]/15 text-[#E8590C] border border-[#E8590C]/25">
+                        <span className="px-2 py-1 rounded-md text-xs font-bold bg-[#F28A1B]/15 text-[#964700] dark:text-[#FDBA74] border border-[#F28A1B]/30">
                           BETA
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] text-[var(--text-muted)] hidden sm:inline">
+                    <span className="text-sm text-[var(--text-secondary)] hidden sm:inline">
                       30s max • Editable before send
                     </span>
                   </div>
 
                   {/* Editable Transcript Text Box */}
                   {(voiceTranscript || !voiceSupported || isListening) && (
-                    <div className="p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                          <Volume2 className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                        <label className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                          <Volume2 className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC]" />
                           Spoken / Typed Instructions
                         </label>
                         {voiceTranscript && (
                           <button
                             type="button"
                             onClick={() => setVoiceTranscript("")}
-                            className="text-[10px] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer"
+                            className="min-h-[44px] px-3 py-1 text-sm text-[var(--text-secondary)] hover:text-rose-500 cursor-pointer flex items-center"
                           >
                             Clear
                           </button>
@@ -2297,31 +2334,31 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         onChange={(e) => setVoiceTranscript(e.target.value)}
                         placeholder="e.g. 'Abeg make food for 4 people no put pork, budget na 3000 naira, mild pepper'"
                         rows={2}
-                        className="w-full text-xs sm:text-sm p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#1F5C3A] resize-none"
+                        className="w-full text-sm p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#D9381E] resize-none"
                       />
 
-                      <div className="flex items-center justify-between gap-2 pt-0.5">
-                        <span className="text-[10px] text-[var(--text-muted)]">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-0.5">
+                        <span className="text-sm text-[var(--text-secondary)]">
                           Edit text freely, then apply to settings.
                         </span>
                         <button
                           type="button"
                           onClick={handleInterpretVoice}
                           disabled={voiceInterpreting || !voiceTranscript.trim()}
-                          className={`min-h-[30px] px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                             voiceInterpreting || !voiceTranscript.trim()
                               ? "bg-[var(--bg-surface)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-subtle)]"
-                              : "bg-[#1F5C3A] hover:bg-[#17472D] text-white shadow-sm active:scale-95"
+                              : "bg-[#1F6B3B] hover:bg-[#18552E] text-white shadow-sm active:scale-95"
                           }`}
                         >
                           {voiceInterpreting ? (
                             <>
-                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              <RefreshCw className="w-4 h-4 animate-spin" />
                               <span>Interpreting...</span>
                             </>
                           ) : (
                             <>
-                              <Sparkles className="w-3 h-3 text-[#E8590C]" />
+                              <Sparkles className="w-4 h-4 text-[#F5B83D]" />
                               <span>Apply to Plan</span>
                             </>
                           )}
@@ -2332,25 +2369,25 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
                   {/* Feedback / Error / Changes Banner */}
                   {voiceMessage && (
-                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[#2B1810] dark:text-amber-200 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                       <span>{voiceMessage}</span>
                     </div>
                   )}
 
                   {voiceAppliedChanges && (
-                    <div className="p-2.5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs flex items-center justify-between gap-2 shadow-sm">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                    <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[#2B1810] dark:text-[#FBF5EE] text-sm flex items-center justify-between gap-2 shadow-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                         <span className="truncate font-medium">{voiceAppliedChanges}</span>
                       </div>
                       {previousVoiceState && (
                         <button
                           type="button"
                           onClick={handleUndoVoice}
-                          className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[#D94F04] text-[var(--text-primary)] hover:text-[#D94F04] font-semibold text-[11px] shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                          className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[#D9381E] text-[var(--text-primary)] hover:text-[#D9381E] font-semibold text-sm shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
                         >
-                          <Undo2 className="w-3 h-3" />
+                          <Undo2 className="w-4 h-4" />
                           <span>Undo</span>
                         </button>
                       )}
@@ -2367,30 +2404,30 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
-                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs text-white gap-2">
+                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-sm text-white gap-2">
                       <span className="truncate max-w-[190px] font-medium opacity-95">
                         {selectedFile?.name || "kitchen_snapshot.jpg"}
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         {voiceSupported && (
                           <button
                             onClick={startVoiceRecognition}
                             type="button"
-                            className={`min-h-[32px] px-2.5 py-1 rounded-lg border text-xs text-white backdrop-blur-sm transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
+                            className={`min-h-[44px] px-3.5 py-1.5 rounded-xl border text-sm text-white backdrop-blur-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${
                               isListening
                                 ? "bg-rose-600 border-rose-400 animate-pulse ring-2 ring-rose-400/40"
                                 : "bg-black/60 hover:bg-black/80 border-white/20"
                             }`}
                             title="Speak instruction"
                           >
-                            <Mic className="w-3.5 h-3.5" />
+                            <Mic className="w-4 h-4" />
                             <span className="hidden sm:inline">{isListening ? `${recordingSeconds}s` : "Speak"}</span>
                           </button>
                         )}
                         <button
                           onClick={() => fileInputRef.current?.click()}
                           type="button"
-                          className="min-h-[32px] px-2.5 py-1 rounded-lg bg-black/60 hover:bg-black/80 border border-white/20 text-xs text-white backdrop-blur-sm transition-colors active:scale-95 cursor-pointer"
+                          className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 border border-white/20 text-sm text-white backdrop-blur-sm transition-colors active:scale-95 cursor-pointer flex items-center"
                         >
                           Change
                         </button>
@@ -2400,16 +2437,16 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
                   {/* Transcript box when photo preview is present */}
                   {(voiceTranscript || isListening) && (
-                    <div className="p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
+                    <div className="p-3.5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                          <Volume2 className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                        <label className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                          <Volume2 className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC]" />
                           Spoken Instructions
                         </label>
                         <button
                           type="button"
                           onClick={() => setVoiceTranscript("")}
-                          className="text-[10px] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer"
+                          className="min-h-[44px] px-3 py-1 text-sm text-[var(--text-secondary)] hover:text-rose-500 cursor-pointer flex items-center"
                         >
                           Clear
                         </button>
@@ -2419,16 +2456,16 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         onChange={(e) => setVoiceTranscript(e.target.value)}
                         placeholder="e.g. 'Make food for 4 people no put pork, budget na 3000 naira'"
                         rows={2}
-                        className="w-full text-xs p-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#1F5C3A] resize-none"
+                        className="w-full text-sm p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#D9381E] resize-none"
                       />
                       <div className="flex items-center justify-end">
                         <button
                           type="button"
                           onClick={handleInterpretVoice}
                           disabled={voiceInterpreting || !voiceTranscript.trim()}
-                          className="min-h-[28px] px-3 py-1 rounded-lg text-xs font-semibold bg-[#1F5C3A] hover:bg-[#17472D] text-white flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                          className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-[#1F6B3B] hover:bg-[#18552E] text-white flex items-center gap-2 active:scale-95 cursor-pointer"
                         >
-                          {voiceInterpreting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-[#E8590C]" />}
+                          {voiceInterpreting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-[#F5B83D]" />}
                           <span>Apply to Plan</span>
                         </button>
                       </div>
@@ -2436,18 +2473,18 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   )}
 
                   {voiceAppliedChanges && (
-                    <div className="p-2.5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs flex items-center justify-between gap-2 shadow-sm">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                    <div className="p-3 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[#2B1810] dark:text-[#FBF5EE] text-sm flex items-center justify-between gap-2 shadow-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CheckCircle2 className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                         <span className="truncate font-medium">{voiceAppliedChanges}</span>
                       </div>
                       {previousVoiceState && (
                         <button
                           type="button"
                           onClick={handleUndoVoice}
-                          className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[#D94F04] text-[var(--text-primary)] hover:text-[#D94F04] font-semibold text-[11px] shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                          className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[#D9381E] text-[var(--text-primary)] hover:text-[#D9381E] font-semibold text-sm shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
                         >
-                          <Undo2 className="w-3 h-3" />
+                          <Undo2 className="w-4 h-4" />
                           <span>Undo</span>
                         </button>
                       )}
@@ -2459,11 +2496,11 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               {/* Visible "Add ingredient" box + Quick Nigerian Suggestions */}
               <div className="mt-3.5 pt-3 border-t border-[var(--border-subtle)] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                    <Salad className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                  <label className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                    <Salad className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC]" />
                     <span>Kitchen Ingredients</span>
                     {(data ? data.detected_items.length : preAnalysisItems.length) > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#1F5C3A]/15 text-[#1F5C3A] dark:text-[#86EFAC] font-bold">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-[#1F6B3B]/15 text-[#1F6B3B] dark:text-[#86EFAC] font-bold">
                         {data ? data.detected_items.length : preAnalysisItems.length}
                       </span>
                     )}
@@ -2472,7 +2509,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     <button
                       type="button"
                       onClick={() => setPreAnalysisItems([])}
-                      className="text-[10px] text-[var(--text-muted)] hover:text-rose-500 cursor-pointer font-medium"
+                      className="min-h-[44px] px-2 text-sm text-[var(--text-secondary)] hover:text-rose-500 cursor-pointer font-medium flex items-center"
                     >
                       Clear all
                     </button>
@@ -2481,20 +2518,20 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
                 {/* Active Chips (Before photo analysis) */}
                 {preAnalysisItems.length > 0 && !data && (
-                  <div className="flex flex-wrap gap-1.5 p-2 rounded-lg bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                  <div className="flex flex-wrap gap-2 p-2.5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
                     {preAnalysisItems.map((item, idx) => (
                       <span
                         key={idx}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#1F5C3A]/10 text-[#1F5C3A] dark:bg-[#287A4D]/25 dark:text-[#86EFAC] border border-[#1F5C3A]/20"
+                        className="min-h-[44px] inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[#1F6B3B]/10 text-[#1F6B3B] dark:bg-[#1F6B3B]/25 dark:text-[#86EFAC] border border-[#1F6B3B]/20"
                       >
                         <span>{item.name}</span>
                         <button
                           type="button"
                           onClick={() => handleRemovePreAnalysisItem(idx)}
-                          className="hover:text-rose-500 text-[var(--text-muted)] p-0.5 rounded cursor-pointer"
+                          className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 text-[var(--text-muted)] cursor-pointer"
                           aria-label={`Remove ${item.name}`}
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </span>
                     ))}
@@ -2515,7 +2552,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       }
                     }}
                     placeholder="Type ingredient (e.g. Ugwu, Smoked Fish, Beans)..."
-                    className="flex-1 text-xs sm:text-sm px-3 py-2 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#1F5C3A]"
+                    className="flex-1 min-h-[44px] text-sm px-3.5 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[#D9381E]"
                   />
                   <button
                     type="button"
@@ -2526,21 +2563,21 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       }
                     }}
                     disabled={!typedIngredient.trim()}
-                    className={`min-h-[34px] px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                    className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                       typedIngredient.trim()
-                        ? "bg-[#1F5C3A] hover:bg-[#17472D] text-white shadow-sm active:scale-95"
+                        ? "bg-[#D9381E] hover:bg-[#BC2C14] text-white shadow-sm active:scale-95"
                         : "bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] cursor-not-allowed opacity-60"
                     }`}
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                     <span>Add</span>
                   </button>
                 </div>
 
                 {/* Suggestions for common Nigerian items */}
                 <div>
-                  <p className="text-[11px] text-[var(--text-muted)] mb-1.5 font-medium">Quick Nigerian staples (tap to add):</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <p className="text-sm text-[var(--text-secondary)] mb-2 font-medium">Quick Nigerian staples (tap to add):</p>
+                  <div className="flex flex-wrap gap-2">
                     {NIGERIAN_SUGGESTIONS.map((sug) => {
                       const isAdded = data
                         ? data.detected_items.some((it) => it.name.toLowerCase() === sug.toLowerCase())
@@ -2550,17 +2587,13 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           key={sug}
                           type="button"
                           onClick={() => handleAddPreAnalysisItem(sug)}
-                          className={`text-[11px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                          className={`min-h-[44px] text-sm px-3.5 py-2 rounded-full border transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                             isAdded
-                              ? "bg-[#1F5C3A]/15 text-[#1F5C3A] dark:text-[#86EFAC] border-[#1F5C3A]/30 font-semibold"
-                              : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[#1F5C3A]/50 hover:bg-[var(--bg-surface-hover)]"
+                              ? "bg-[#1F6B3B]/15 text-[#1F6B3B] dark:text-[#86EFAC] border-[#1F6B3B]/30 font-semibold"
+                              : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]"
                           }`}
                         >
-                          {isAdded ? (
-                            <Check className="w-3 h-3 text-[#1F5C3A] dark:text-[#86EFAC]" />
-                          ) : (
-                            <Plus className="w-3 h-3 text-[var(--text-muted)]" />
-                          )}
+                          <Plus className="w-3.5 h-3.5 text-[#D9381E]" />
                           <span>{sug}</span>
                         </button>
                       );
@@ -2574,38 +2607,38 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 <button
                   type="button"
                   onClick={() => setShowPreferences(!showPreferences)}
-                  className="w-full min-h-[36px] flex items-center justify-between text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-0.5 cursor-pointer"
+                  className="w-full min-h-[44px] flex items-center justify-between text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors py-1 cursor-pointer"
                 >
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                  <span className="flex items-center gap-2 font-medium">
+                    <SlidersHorizontal className="w-4 h-4 text-[#D9381E] shrink-0" />
                     Spice, Servings & Fuel ({householdSize} {householdSize === 1 ? "person" : "people"}, {spiceLevel}, {cookingFuel.toUpperCase()})
                   </span>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${
+                    className={`w-4 h-4 transition-transform duration-200 shrink-0 ${
                       showPreferences ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
                 {showPreferences && (
-                  <div className="mt-2.5 space-y-3.5 p-3.5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-xs">
+                  <div className="mt-2.5 space-y-4 p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-sm">
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[var(--text-muted)] font-medium">Spice Level</label>
-                        <span className="text-[var(--text-muted)] text-[11px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[var(--text-primary)] font-semibold">Spice Level</label>
+                        <span className="text-[var(--text-secondary)] text-sm">
                           {spiceLevel === "Mild" ? "1 Ata Rodo / 2 Servings" : spiceLevel === "Authentic Hot" ? "3 Ata Rodo / 2 Servings" : "5+ Ata Rodo / 2 Servings"}
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-1.5">
+                      <div className="grid grid-cols-3 gap-2">
                         {(["Mild", "Authentic Hot", "Suya Extra"] as const).map((level) => (
                           <button
                             key={level}
                             type="button"
                             onClick={() => setSpiceLevel(level)}
-                            className={`min-h-[36px] py-1 px-1.5 rounded-lg text-center text-xs transition-all active:scale-95 font-medium cursor-pointer ${
+                            className={`min-h-[44px] py-2 px-3 rounded-xl text-center text-sm transition-all active:scale-95 font-semibold cursor-pointer ${
                               spiceLevel === level
-                                ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
-                                : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]"
+                                ? "bg-[#D9381E] text-white shadow-sm"
+                                : "bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]"
                             }`}
                           >
                             {level}
@@ -2615,20 +2648,20 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[var(--text-muted)] font-medium">Cooking Fuel</label>
-                        <span className="text-[var(--text-primary)] font-semibold text-xs capitalize">{cookingFuel}</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[var(--text-primary)] font-semibold">Cooking Fuel</label>
+                        <span className="text-[var(--text-primary)] font-semibold text-sm capitalize">{cookingFuel}</span>
                       </div>
-                      <div className="grid grid-cols-4 gap-1.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {(["gas", "charcoal", "electric", "kerosene"] as const).map((fuel) => (
                           <button
                             key={fuel}
                             type="button"
                             onClick={() => setCookingFuel(fuel)}
-                            className={`min-h-[36px] py-1 px-1 rounded-lg text-center text-xs transition-all active:scale-95 font-medium cursor-pointer capitalize ${
+                            className={`min-h-[44px] py-2 px-2.5 rounded-xl text-center text-sm transition-all active:scale-95 font-semibold cursor-pointer capitalize ${
                               cookingFuel === fuel
-                                ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
-                                : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]"
+                                ? "bg-[#D9381E] text-white shadow-sm"
+                                : "bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]"
                             }`}
                           >
                             {fuel === "gas" && "⚡ Gas"}
@@ -2638,7 +2671,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           </button>
                         ))}
                       </div>
-                      <p className="text-[11px] text-[var(--text-muted)] mt-1.5 italic">
+                      <p className="text-sm text-[var(--text-secondary)] mt-2 italic">
                         {cookingFuel === "gas" && "Gas: Instant controllable heat, standard cook times."}
                         {cookingFuel === "charcoal" && "Charcoal: +10m prep for hot glowing coals, rich smoky flavor."}
                         {cookingFuel === "electric" && "Electric: +3m coil preheat, steady uniform heat."}
@@ -2648,8 +2681,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[var(--text-muted)] font-medium">Household Servings</label>
-                        <span className="text-[var(--text-primary)] font-semibold text-xs">{householdSize} Servings</span>
+                        <label className="text-[var(--text-secondary)] font-medium text-sm">Household Servings</label>
+                        <span className="text-[var(--text-primary)] font-semibold text-sm">{householdSize} Servings</span>
                       </div>
                       <input
                         type="range"
@@ -2658,7 +2691,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         step={1}
                         value={householdSize}
                         onChange={(e) => setHouseholdSize(Number(e.target.value))}
-                        className="w-full accent-[#1F5C3A] dark:accent-[#287A4D] cursor-pointer h-5"
+                        className="w-full accent-[#1F6B3B] dark:accent-[#86EFAC] cursor-pointer h-5"
                       />
                     </div>
                   </div>
@@ -2667,38 +2700,28 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
               {/* Submit CTA */}
               <div className="mt-4">
-                <button
+                <Button
                   onClick={handleSubmit}
                   disabled={loading || !canSubmit}
-                  className={`w-full min-h-[48px] py-3 px-4 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all duration-200 shadow-md cursor-pointer ${
-                    loading || !canSubmit
-                      ? "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-subtle)]"
-                      : "bg-[#1F5C3A] hover:bg-[#17472D] active:bg-[#123823] dark:bg-[#287A4D] dark:hover:bg-[#31945D] text-white shadow-[#1F5C3A]/20 hover:shadow-lg active:scale-[0.98]"
-                  }`}
+                  isLoading={loading}
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  icon={!loading ? <Utensils className="w-4 h-4 text-white shrink-0" /> : undefined}
                 >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white shrink-0" />
-                      <span className="truncate">{statusStep || "Finding what to chop..."}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Utensils className="w-4 h-4 text-white shrink-0" />
-                      <span>Show me what to chop</span>
-                    </>
-                  )}
-                </button>
+                  {loading ? (statusStep || "Finding what to chop...") : "Show me what to chop"}
+                </Button>
                 {!canSubmit && !loading && (
-                  <p className="text-xs text-[var(--text-muted)] text-center mt-2 font-normal">
+                  <p className="text-sm text-[var(--text-secondary)] text-center mt-2.5 font-normal">
                     Add a photo or tell us your ingredients to get started.
                   </p>
                 )}
               </div>
 
               {error && (
-                <div className="mt-3.5 p-3 rounded-xl bg-[#FDEEEC] dark:bg-[#2E1816] border border-[#F5C2BC] dark:border-[#5C2A25] text-[#A6281E] dark:text-[#FCA5A5] text-xs flex items-center justify-between gap-3 shadow-sm">
+                <div className="mt-3.5 p-3.5 rounded-xl bg-[#FDEEEC] dark:bg-[#2E1816] border border-[#F5C2BC] dark:border-[#5C2A25] text-[#2B1810] dark:text-[#FCA5A5] text-sm flex items-center justify-between gap-3 shadow-sm">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-[#D94F04] shrink-0 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 text-[#D9381E] shrink-0 mt-0.5" />
                     <div className="space-y-0.5">
                       <p className="font-semibold">Notice</p>
                       <p className="leading-relaxed">{error}</p>
@@ -2707,9 +2730,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    className="px-3 py-1.5 rounded-lg bg-[#D94F04] hover:bg-[#BF4300] text-white font-semibold text-xs shrink-0 cursor-pointer active:scale-95 transition-all shadow-sm flex items-center gap-1"
+                    className="min-h-[44px] px-4 py-2 rounded-xl bg-[#D9381E] hover:bg-[#BC2C14] text-white font-semibold text-sm shrink-0 cursor-pointer active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
                   >
-                    <RefreshCw className="w-3 h-3" />
+                    <RefreshCw className="w-3.5 h-3.5" />
                     <span>Try again</span>
                   </button>
                 </div>
@@ -2717,82 +2740,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             </div>
           </div>
 
-          {/* Right Column: Culinary Showcase */}
-          <div className="lg:col-span-6">
-            <div className="chop-card p-5 sm:p-8 relative overflow-hidden bg-gradient-to-br from-[var(--bg-surface)] via-[var(--bg-surface-subtle)] to-[var(--bg-surface)] shadow-lg border border-[var(--border-subtle)]">
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <span className="chop-pill chop-pill-accent text-xs font-semibold">
-                  <Flame className="w-3.5 h-3.5 text-[#E8590C]" />
-                  Nigerian Home Cooking
-                </span>
-                <span className="text-xs text-[var(--text-muted)] font-medium">Zero Food Waste</span>
-              </div>
-
-              <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-gradient-to-br from-[#2B1B12] via-[#3E2519] to-[#1F5C3A] p-5 sm:p-7 flex flex-col justify-between text-white shadow-inner">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-[#E8590C]/25 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#1F5C3A]/35 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="relative z-10 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#FB923C] block">
-                      Everyday Kitchen Magic
-                    </span>
-                    <h3 className="text-xl sm:text-2xl font-serif font-normal text-[#FFF8EF] leading-tight">
-                      From Raw Ingredients to Royal Pots
-                    </h3>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0">
-                    <ChefHat className="w-6 h-6 text-[#FFF8EF]" />
-                  </div>
-                </div>
-
-                <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-2 my-4">
-                  <div className="p-2.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10">
-                    <p className="text-xs text-[#FB923C] font-semibold">Sweet Dodo</p>
-                    <p className="text-xs text-white/80">Golden plantain cubes</p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10">
-                    <p className="text-xs text-[#4ADE80] font-semibold">Fresh Ugwu</p>
-                    <p className="text-xs text-white/80">Fresh native greens</p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 col-span-2 sm:col-span-1">
-                    <p className="text-xs text-[#FDBA74] font-semibold">Smoked Titus</p>
-                    <p className="text-xs text-white/80">Deep savory umami</p>
-                  </div>
-                </div>
-
-                <div className="relative z-10 p-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-[#E8590C] text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">
-                        Peppered Titus & Dodo Frittata
-                      </p>
-                      <p className="text-xs text-white/80 truncate">
-                        Ready in ≤15 mins • Everyday Budget
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold bg-white text-[#2B1B12] px-2.5 py-1 rounded-full shrink-0 shadow-sm">
-                    ~₦850
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mt-4 text-xs">
-                <div className="p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
-                  <p className="font-semibold text-[var(--text-primary)]">Quick Meals (≤20m)</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">Fast weekday scrambles & pan roasts</p>
-                </div>
-                <div className="p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
-                  <p className="font-semibold text-[var(--text-primary)]">Proper Cooking</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">Soul-satisfying soups, stews & beans</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Right Column: Reserved for redesigned welcome screen */}
+          <div className="hidden lg:block lg:col-span-6" />
         </section>
 
         {/* ==============================================================
@@ -2803,7 +2752,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <h2 className="text-2xl sm:text-3xl font-serif font-normal text-[var(--text-primary)]">
               How ChopSnap Works
             </h2>
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+            <p className="text-sm sm:text-base text-[var(--text-secondary)]">
               Three simple steps to waste nothing and eat well every day.
             </p>
           </div>
@@ -2819,7 +2768,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
                 Snap Your Kitchen
               </h3>
-              <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+              <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed">
                 Take a clear snapshot of your fridge crisper, pantry cupboard, or kitchen counter basket.
               </p>
             </div>
@@ -2834,7 +2783,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
                 Check What You Have
               </h3>
-              <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+              <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed">
                 We spot your fish, meats, produce, and staples. You can add or remove items to customize the list.
               </p>
             </div>
@@ -2849,7 +2798,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
                 Cook and Waste Nothing
               </h3>
-              <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+              <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed">
                 Follow simple, step-by-step instructions. If an ingredient is missing, a tiny shopping list is ready.
               </p>
             </div>
@@ -2862,15 +2811,15 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
         <section className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-1.5 border-b border-[var(--border-subtle)] pb-3">
             <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E8590C] uppercase tracking-wider mb-0.5">
-                <Zap className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#D9381E] uppercase tracking-wider mb-0.5">
+                <Zap className="w-4 h-4" />
                 <span>Instant Demo Mode</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-serif font-normal text-[var(--text-primary)]">
                 Try an example
               </h2>
             </div>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-sm text-[var(--text-secondary)]">
               No photo ready right now? Tap any verified kitchen to test immediately:
             </p>
           </div>
@@ -2879,19 +2828,19 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <button
               onClick={() => handleLoadSample("market")}
               type="button"
-              className="chop-card p-4 sm:p-5 text-left hover:border-[#1F5C3A] dark:hover:border-[#287A4D] transition-all group shadow-sm active:scale-[0.98] cursor-pointer"
+              className="chop-card p-4 sm:p-5 text-left hover:border-[#1F6B3B] dark:hover:border-[#287A4D] transition-all group shadow-sm active:scale-[0.98] cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[var(--primary-subtle)] text-[var(--primary-text)] flex items-center justify-center border border-[var(--primary-border)] group-hover:scale-105 transition-transform">
-                  <Store className="w-4 h-4 text-[#D94F04]" />
+                  <Store className="w-4 h-4 text-[#D9381E]" />
                 </div>
-                <span className="chop-pill chop-pill-primary text-xs">Fridge & Counter</span>
+                <span className="chop-pill chop-pill-primary text-sm">Fridge & Counter</span>
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] group-hover:text-[#1F5C3A] dark:group-hover:text-[#86EFAC] transition-colors flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] group-hover:text-[#1F6B3B] dark:group-hover:text-[#86EFAC] transition-colors flex items-center justify-between">
                 <span>Lagos Market Haul</span>
                 <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+              <p className="text-sm text-[var(--text-secondary)] mt-1.5 line-clamp-2">
                 Fresh eggs, smoked Titus fish, sweet ripe plantains, plum tomatoes, ata rodo, and sliced ugwu.
               </p>
             </button>
@@ -2899,19 +2848,19 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <button
               onClick={() => handleLoadSample("pantry")}
               type="button"
-              className="chop-card p-4 sm:p-5 text-left hover:border-[#E8590C] transition-all group shadow-sm active:scale-[0.98] cursor-pointer"
+              className="chop-card p-4 sm:p-5 text-left hover:border-[#F28A1B] transition-all group shadow-sm active:scale-[0.98] cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent-text)] flex items-center justify-center border border-[var(--accent-border)] group-hover:scale-105 transition-transform">
-                  <Layers className="w-4 h-4 text-[#E8590C]" />
+                  <Layers className="w-4 h-4 text-[#F28A1B]" />
                 </div>
-                <span className="chop-pill chop-pill-accent text-xs">Pantry Shelf</span>
+                <span className="chop-pill chop-pill-accent text-sm">Pantry Shelf</span>
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] group-hover:text-[#E8590C] transition-colors flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] group-hover:text-[#F28A1B] transition-colors flex items-center justify-between">
                 <span>Honey Beans Station</span>
                 <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+              <p className="text-sm text-[var(--text-secondary)] mt-1.5 line-clamp-2">
                 Cooked Oloyin honey beans, fresh scent leaves (efirin), dodo plantains, eggs, and smoked fish flakes.
               </p>
             </button>
@@ -2919,19 +2868,19 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <button
               onClick={() => handleLoadSample("native")}
               type="button"
-              className="chop-card p-4 sm:p-5 text-left hover:border-[#1F5C3A] dark:hover:border-[#287A4D] transition-all group shadow-sm active:scale-[0.98] cursor-pointer"
+              className="chop-card p-4 sm:p-5 text-left hover:border-[#1F6B3B] dark:hover:border-[#287A4D] transition-all group shadow-sm active:scale-[0.98] cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[var(--primary-subtle)] text-[var(--primary-text)] flex items-center justify-center border border-[var(--primary-border)] group-hover:scale-105 transition-transform">
-                  <Salad className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                  <Salad className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC]" />
                 </div>
-                <span className="chop-pill chop-pill-primary text-xs">Native Crisper</span>
+                <span className="chop-pill chop-pill-primary text-sm">Native Crisper</span>
               </div>
-              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] group-hover:text-[#1F5C3A] dark:group-hover:text-[#86EFAC] transition-colors flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-semibold text-[var(--text-primary)] group-hover:text-[#1F6B3B] dark:group-hover:text-[#86EFAC] transition-colors flex items-center justify-between">
                 <span>Native Greens Crisper</span>
                 <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+              <p className="text-sm text-[var(--text-secondary)] mt-1.5 line-clamp-2">
                 Fresh pumpkin ugwu leaves, smoked catfish mangala, stockfish bits (okporoko), and pure red palm oil.
               </p>
             </button>
@@ -2948,22 +2897,18 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
           {isReviewStep && !data && !loading && (
             <div id="review-section" ref={reviewRef} className="chop-card p-5 sm:p-8 shadow-lg border-2 border-[var(--primary-border)] space-y-6">
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border-subtle)]">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs font-semibold shadow-xs mb-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC]" />
-                    <span>Ingredient Review Step</span>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-normal text-[var(--text-primary)]">
-                    Confirm your kitchen ingredients
-                  </h3>
-                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
-                    Meta Muse Glimmer will formulate recipes using <strong>only confirmed items</strong>. Please check unsure items and tap one-tap choices to confirm.
-                  </p>
-                </div>
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
+                <StepHeader
+                  stepNumber={2}
+                  stepTotal={3}
+                  title="Confirm your kitchen ingredients"
+                  description="Meta Muse Glimmer will formulate recipes using only confirmed items. Please check unsure items and tap one-tap choices to confirm."
+                  className="mb-0"
+                />
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
+                <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+                  <ProgressDots totalSteps={3} currentStep={2} labels={["Provisions", "Review", "Cook"]} />
+                  <span className="text-sm font-semibold px-3 py-1.5 rounded-full bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
                     {selectedReviewItemIds.size} of {reviewItems.length} selected
                   </span>
                 </div>
@@ -2973,13 +2918,13 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-[#1F5C3A]/10 text-[#1F5C3A] dark:text-[#86EFAC] flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-[#1F6B3B]/10 text-[#1F6B3B] dark:text-[#86EFAC] flex items-center justify-center">
                       <Check className="w-3.5 h-3.5" />
                     </div>
                     <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
                       Looks clear ({looksClearItems.length})
                     </h4>
-                    <span className="text-xs text-[var(--text-muted)] font-normal hidden sm:inline">
+                    <span className="text-sm text-[var(--text-secondary)] font-normal hidden sm:inline">
                       • Preselected (tap to toggle or remove)
                     </span>
                   </div>
@@ -2988,7 +2933,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     <button
                       type="button"
                       onClick={() => handleToggleAllLooksClear(looksClearItems.map((i) => i.id!))}
-                      className="text-xs text-[#1F5C3A] dark:text-[#86EFAC] hover:underline font-medium cursor-pointer"
+                      className="min-h-[44px] px-3 py-1 text-sm text-[#1F6B3B] dark:text-[#86EFAC] hover:underline font-semibold cursor-pointer flex items-center"
                     >
                       {looksClearItems.every((i) => selectedReviewItemIds.has(i.id!))
                         ? "Deselect all"
@@ -2998,7 +2943,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 </div>
 
                 {looksClearItems.length === 0 ? (
-                  <p className="text-xs text-[var(--text-muted)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                  <p className="text-sm text-[var(--text-secondary)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
                     No clear items spotted. Review unsure items below or add ingredients manually.
                   </p>
                 ) : (
@@ -3009,26 +2954,26 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         <div
                           key={item.id}
                           onClick={() => handleToggleReviewItem(item.id!)}
-                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs border ${
+                          className={`min-h-[44px] inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer shadow-xs border ${
                             isSelected
-                              ? "bg-[#1F5C3A]/15 dark:bg-[#1F5C3A]/30 border-[#1F5C3A] text-[#1F5C3A] dark:text-[#86EFAC]"
+                              ? "bg-[#1F6B3B]/15 dark:bg-[#1F6B3B]/30 border-[#1F6B3B] text-[#1F6B3B] dark:text-[#86EFAC]"
                               : "bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-default)] opacity-60"
                           }`}
                         >
                           <div
-                            className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border transition-all ${
+                            className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 border transition-all ${
                               isSelected
-                                ? "bg-[#1F5C3A] border-[#1F5C3A] text-white"
+                                ? "bg-[#1F6B3B] border-[#1F6B3B] text-white"
                                 : "border-[var(--border-default)] bg-[var(--bg-surface)]"
                             }`}
                           >
-                            {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
                           </div>
                           <span className={isSelected ? "text-[var(--text-primary)]" : "text-[var(--text-muted)] line-through"}>
                             {item.name}
                           </span>
                           {item.estimated_quantity && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-muted)] font-normal">
+                            <span className="text-sm px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal">
                               {item.estimated_quantity}
                             </span>
                           )}
@@ -3038,10 +2983,10 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                               e.stopPropagation();
                               handleRemoveReviewItem(item.id!);
                             }}
-                            className="w-4 h-4 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D94F04] transition-colors ml-0.5 cursor-pointer"
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D9381E] hover:bg-black/5 dark:hover:bg-white/10 transition-colors ml-1 cursor-pointer"
                             title={`Remove ${item.name}`}
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       );
@@ -3059,13 +3004,13 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
                     Please check ({pleaseCheckItems.length})
                   </h4>
-                  <span className="text-xs text-[var(--text-muted)] font-normal hidden sm:inline">
+                  <span className="text-sm text-[var(--text-secondary)] font-normal hidden sm:inline">
                     • Unsure items (not preselected). Tap a one-tap choice to confirm.
                   </span>
                 </div>
 
                 {pleaseCheckItems.length === 0 ? (
-                  <p className="text-xs text-[var(--text-muted)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
+                  <p className="text-sm text-[var(--text-secondary)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
                     No ambiguous items detected. All visible ingredients looked clear!
                   </p>
                 ) : (
@@ -3077,7 +3022,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       return (
                         <div
                           key={item.id}
-                          className={`p-3.5 rounded-xl border transition-all space-y-2.5 ${
+                          className={`p-4 rounded-xl border transition-all space-y-3 ${
                             isSelected
                               ? "bg-amber-500/10 dark:bg-amber-950/20 border-amber-500/60"
                               : "bg-[var(--bg-surface-subtle)] border-[var(--border-subtle)]"
@@ -3086,22 +3031,22 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           <div className="flex items-center justify-between gap-2">
                             <div
                               onClick={() => handleToggleReviewItem(item.id!)}
-                              className="flex items-center gap-2 cursor-pointer min-w-0"
+                              className="flex items-center gap-2.5 cursor-pointer min-w-0"
                             >
                               <div
-                                className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-all ${
+                                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all ${
                                   isSelected
                                     ? "bg-amber-600 border-amber-600 text-white"
                                     : "border-[var(--border-default)] bg-[var(--bg-surface)]"
                                 }`}
                               >
-                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                                {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                               </div>
-                              <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] truncate">
+                              <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
                                 {item.name}
                               </span>
                               {item.estimated_quantity && (
-                                <span className="text-xs px-1.5 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-muted)] font-normal shrink-0">
+                                <span className="text-sm px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal shrink-0">
                                   {item.estimated_quantity}
                                 </span>
                               )}
@@ -3110,26 +3055,26 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                             <button
                               type="button"
                               onClick={() => handleRemoveReviewItem(item.id!)}
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D94F04] transition-colors cursor-pointer shrink-0"
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D9381E] hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                               title={`Remove ${item.name}`}
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
 
                           {/* Alternatives: One-Tap Choices */}
                           {hasAlternatives && (
                             <div className="pt-2 border-t border-[var(--border-subtle)]">
-                              <p className="text-xs text-[var(--text-muted)] mb-1.5 font-medium">
+                              <p className="text-sm text-[var(--text-secondary)] mb-2 font-medium">
                                 Tap one-tap choice to confirm:
                               </p>
-                              <div className="flex flex-wrap items-center gap-1.5">
+                              <div className="flex flex-wrap items-center gap-2">
                                 {item.alternatives!.map((alt, aIdx) => (
                                   <button
                                     key={aIdx}
                                     type="button"
                                     onClick={() => handleChooseAlternative(item.id!, alt)}
-                                    className="min-h-[28px] px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[#1F5C3A] hover:text-white border border-[var(--border-default)] text-xs font-semibold text-[var(--text-primary)] transition-all active:scale-95 cursor-pointer shadow-xs"
+                                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] hover:bg-[#1F6B3B] hover:text-white border border-[var(--border-default)] text-sm font-semibold text-[var(--text-primary)] transition-all active:scale-95 cursor-pointer shadow-xs"
                                   >
                                     + {alt}
                                   </button>
@@ -3146,7 +3091,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
               {/* Add Missing Item Row */}
               <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
-                <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                <p className="text-sm font-semibold text-[var(--text-secondary)]">
                   Add another ingredient from your pantry:
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -3161,7 +3106,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       }
                     }}
                     placeholder="e.g. Crayfish, Yam, Stockfish, Palm Oil..."
-                    className="w-full sm:flex-1 min-h-[42px] px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#1F5C3A]"
+                    className="w-full sm:flex-1 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#D9381E]"
                   />
                   <input
                     type="text"
@@ -3174,15 +3119,15 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       }
                     }}
                     placeholder="Qty (e.g. 1 cup)"
-                    className="w-full sm:w-36 min-h-[42px] px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#1F5C3A]"
+                    className="w-full sm:w-36 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#D9381E]"
                   />
                   <button
                     type="button"
                     onClick={handleAddReviewItem}
                     disabled={!reviewNewItemName.trim()}
-                    className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-default)] text-xs sm:text-sm font-semibold text-[var(--text-primary)] disabled:opacity-50 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                    className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-default)] text-sm font-semibold text-[var(--text-primary)] disabled:opacity-50 cursor-pointer transition-all flex items-center justify-center gap-2"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                     <span>Add Item</span>
                   </button>
                 </div>
@@ -3190,31 +3135,31 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
               {/* Confirm & Cook Action CTA */}
               <div className="pt-4 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                  <ChefHat className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                  <ChefHat className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                   <span>
                     <strong>{selectedReviewItemIds.size} ingredients</strong> confirmed for recipe generation.
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="lg"
                     onClick={resetAll}
-                    className="min-h-[46px] px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-xs sm:text-sm font-medium text-[var(--text-muted)] cursor-pointer active:scale-95 transition-all"
                   >
                     New scan
-                  </button>
+                  </Button>
 
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="lg"
                     onClick={handleConfirmAndCook}
                     disabled={loading || selectedReviewItemIds.size === 0}
-                    className="min-h-[46px] px-6 py-2.5 rounded-xl bg-[#1F5C3A] hover:bg-[#17472D] active:bg-[#123823] text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-50 transition-all"
+                    icon={<Utensils className="w-4 h-4 text-white" />}
                   >
-                    <Utensils className="w-4 h-4 text-white" />
-                    <span>Confirm and cook</span>
-                  </button>
+                    Confirm and cook
+                  </Button>
                 </div>
               </div>
             </div>
@@ -3239,7 +3184,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 {statusStep || "Processing..."}
               </p>
 
-              <div className="flex flex-col gap-2.5 w-full max-w-sm text-xs text-left">
+              <div className="flex flex-col gap-2.5 w-full max-w-sm text-sm text-left">
                 {(pipelinePhase === "vision"
                   ? [
                       { id: 1, label: "Optimizing photo resolution (768px)" },
@@ -3267,9 +3212,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         {isDone ? (
-                          <CheckCircle2 className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                         ) : isActive ? (
-                          <RefreshCw className="w-4 h-4 animate-spin text-[#E8590C] shrink-0" />
+                          <RefreshCw className="w-4 h-4 animate-spin text-[#F28A1B] shrink-0" />
                         ) : (
                           <Circle className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
                         )}
@@ -3286,7 +3231,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         </span>
                       </div>
                       <span
-                        className={`chop-pill text-xs shrink-0 ${
+                        className={`chop-pill text-sm shrink-0 ${
                           isActive
                             ? "chop-pill-accent"
                             : isDone
@@ -3311,21 +3256,21 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="relative flex h-2.5 w-2.5 shrink-0">
                     {data.is_demo ? (
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E8590C]" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#F28A1B]" />
                     ) : (
                       <>
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1F5C3A] dark:bg-[#86EFAC] opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#1F5C3A] dark:bg-[#86EFAC]" />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1F6B3B] dark:bg-[#86EFAC] opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#1F6B3B] dark:bg-[#86EFAC]" />
                       </>
                     )}
                   </span>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="font-semibold text-[var(--text-primary)]">
                       {data.is_demo ? "Using Curated Demo Data" : "Live Kitchen Analysis Active"}
                     </span>
                     <span className="text-[var(--text-muted)] hidden sm:inline">•</span>
-                    <span className="text-xs text-[var(--text-muted)] hidden sm:inline truncate max-w-xs">
+                    <span className="text-sm text-[var(--text-secondary)] hidden sm:inline truncate max-w-xs">
                       {data.is_demo
                         ? (data.model_metadata?.demo_scenario || "Curated Nigerian Household Scenario")
                         : "Real-time AI analysis of your ingredients"}
@@ -3356,25 +3301,25 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         />
                       ) : (
                         <div className="p-4 text-center">
-                          <Camera className="w-8 h-8 mx-auto text-[#1F5C3A] dark:text-[#86EFAC] mb-2" />
-                          <p className="text-xs text-[var(--text-muted)]">Verified Kitchen Scan</p>
+                          <Camera className="w-8 h-8 mx-auto text-[#1F6B3B] dark:text-[#86EFAC] mb-2" />
+                          <p className="text-sm text-[var(--text-secondary)]">Verified Kitchen Scan</p>
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs text-white">
+                      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-sm text-white">
                         <span className="font-semibold truncate max-w-[150px]">
                           {selectedFile?.name || "Kitchen Photo"}
                         </span>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="px-2 py-0.5 rounded bg-black/60 hover:bg-black/80 border border-white/20 text-xs text-white backdrop-blur-sm cursor-pointer"
+                          className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 border border-white/20 text-sm text-white backdrop-blur-sm cursor-pointer flex items-center"
                         >
                           Change
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-[var(--text-muted)] text-center">
+                    <p className="text-sm text-[var(--text-secondary)] text-center">
                       Ingredients detected directly from this kitchen photo
                     </p>
                   </div>
@@ -3384,10 +3329,10 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[var(--border-subtle)]">
                       <div>
                         <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                          <Tag className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC]" />
+                          <Tag className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC]" />
                           <span>Detected Ingredients ({data.detected_items.length})</span>
                         </h3>
-                        <p className="text-xs text-[var(--text-secondary)]">
+                        <p className="text-sm text-[var(--text-secondary)]">
                           Remove wrong items with <strong>(×)</strong>, or type extra items below. Tap <strong>Update recipes</strong> to re-cook.
                         </p>
                       </div>
@@ -3396,7 +3341,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         type="button"
                         onClick={handleUpdateRecipes}
                         disabled={updatingRecipes || data.detected_items.length === 0}
-                        className="min-h-[44px] px-4 py-2 rounded-xl bg-[#1F5C3A] hover:bg-[#17472D] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50 shrink-0"
+                        className="min-h-[44px] px-4 py-2 rounded-xl bg-[#1F6B3B] hover:bg-[#18552E] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50 shrink-0"
                       >
                         {updatingRecipes ? (
                           <>
@@ -3415,7 +3360,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     {/* Removable Chips */}
                     <div className="flex flex-wrap items-center gap-2 min-h-[48px] p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
                       {data.detected_items.length === 0 ? (
-                        <p className="text-xs text-[var(--text-muted)] italic">
+                        <p className="text-sm text-[var(--text-secondary)] italic">
                           No ingredients in list. Type an ingredient below to add!
                         </p>
                       ) : (
@@ -3426,27 +3371,27 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           return (
                             <div
                               key={idx}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--primary-border)] shadow-xs text-xs font-semibold text-[var(--text-primary)] transition-all group"
+                              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--primary-border)] shadow-xs text-sm font-semibold text-[var(--text-primary)] transition-all group"
                             >
                               <span
                                 className={`w-2 h-2 rounded-full shrink-0 ${
                                   isProduce
-                                    ? "bg-[#1F5C3A] dark:bg-[#86EFAC]"
+                                    ? "bg-[#1F6B3B] dark:bg-[#86EFAC]"
                                     : isProtein
-                                    ? "bg-[#E8590C]"
-                                    : "bg-[#D97706]"
+                                    ? "bg-[#D9381E]"
+                                    : "bg-[#F28A1B]"
                                 }`}
                               />
                               <span>{item.name}</span>
                               {item.estimated_quantity && (
-                                <span className="text-xs px-1.5 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-muted)] font-normal">
+                                <span className="text-sm px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal">
                                   {item.estimated_quantity}
                                 </span>
                               )}
                               <button
                                 type="button"
                                 onClick={() => handleRemoveIngredient(idx)}
-                                className="w-4 h-4 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D94F04] hover:bg-black/5 dark:hover:bg-white/10 transition-colors ml-0.5 cursor-pointer"
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[#D9381E] hover:bg-black/5 dark:hover:bg-white/10 transition-colors ml-1 cursor-pointer"
                                 title={`Remove ${item.name}`}
                                 aria-label={`Remove ${item.name}`}
                               >
@@ -3472,7 +3417,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                             }
                           }}
                           placeholder="Add ingredient (e.g. Crayfish, Yam, Stockfish)..."
-                          className="w-full min-h-[42px] px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#1F5C3A]"
+                          className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#D9381E]"
                         />
                       </div>
 
@@ -3488,7 +3433,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                             }
                           }}
                           placeholder="Qty (e.g. 1 bunch, 2 bulbs)"
-                          className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#1F5C3A]"
+                          className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-default)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[#D9381E]"
                         />
                       </div>
 
@@ -3496,9 +3441,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         type="button"
                         onClick={handleAddIngredient}
                         disabled={!newIngredientName.trim()}
-                        className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[var(--primary-subtle)] hover:bg-[var(--primary-border)] border border-[var(--primary-border)] text-[var(--primary-text)] font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-default)] text-[var(--text-primary)] font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4 text-[#D9381E]" />
                         <span>Add</span>
                       </button>
                     </div>
@@ -3522,21 +3467,21 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       <Wallet className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC]" />
                       <span>Ingredients Used &amp; Value of Ingredients You&apos;re Using</span>
                     </h3>
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-sm text-[var(--text-secondary)]">
                       Calculated from your confirmed kitchen list and the recipes currently displayed.
                     </p>
                   </div>
 
                   {/* City Selector */}
                   <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="text-xs text-[var(--text-muted)] flex items-center gap-1 font-medium">
-                      <MapPin className="w-3.5 h-3.5" />
+                    <span className="text-sm text-[var(--text-secondary)] flex items-center gap-1 font-medium">
+                      <MapPin className="w-4 h-4 text-[#D9381E]" />
                       <span>Market City:</span>
                     </span>
                     <select
                       value={selectedCity}
                       onChange={(e) => setSelectedCity(e.target.value as SupportedCity)}
-                      className="text-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-lg px-2.5 py-1.5 outline-none cursor-pointer focus:border-[#1F5C3A] font-semibold"
+                      className="min-h-[44px] text-sm bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] rounded-xl px-3 py-2 outline-none cursor-pointer focus:border-[#D9381E] font-semibold"
                     >
                       {SUPPORTED_CITIES.map((c) => (
                         <option key={c} value={c}>
@@ -3551,48 +3496,48 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Metric 1: Ingredients Used % */}
                   <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-sm">
                       <span className="text-[var(--text-secondary)] font-medium">Ingredients Used</span>
-                      <span className="font-bold text-[#1F5C3A] dark:text-[#86EFAC] text-sm sm:text-base">
+                      <span className="font-bold text-[#1F6B3B] dark:text-[#86EFAC] text-sm sm:text-base">
                         {ingredientsUsedPercent}%
                       </span>
                     </div>
                     <div className="w-full bg-[var(--border-subtle)] h-2 rounded-full overflow-hidden">
                       <div
-                        className="bg-[#1F5C3A] dark:bg-[#86EFAC] h-full transition-all duration-500 rounded-full"
+                        className="bg-[#1F6B3B] dark:bg-[#86EFAC] h-full transition-all duration-500 rounded-full"
                         style={{ width: `${Math.min(ingredientsUsedPercent, 100)}%` }}
                       />
                     </div>
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-secondary)]">
                       {usedUserIngredients.length} of {totalUserIngredients} unique ingredients from your kitchen used in these recipes.
                     </p>
                   </div>
 
                   {/* Metric 2: Value of ingredients you're using */}
                   <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2">
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-sm">
                       <span className="text-[var(--text-secondary)] font-medium">Value of ingredients you&apos;re using</span>
                       {hasSavingsData && (
-                        <span className="font-bold text-[#D94F04] dark:text-[#FB923C] text-sm sm:text-base">
+                        <span className="font-bold text-[#D9381E] dark:text-[#FCA5A5] text-sm sm:text-base">
                           ~₦{ingredientValueNaira.toLocaleString()} (estimate)
                         </span>
                       )}
                     </div>
                     {hasSavingsData ? (
-                      <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                      <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
                         <span>Based on {selectedCity} prices</span>
                         {somePricesUnavailable && (
-                          <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                          <span className="text-sm text-[#964700] dark:text-[#FDBA74] font-medium">
                             some prices unavailable
                           </span>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--text-muted)] italic">
+                      <p className="text-sm text-[var(--text-secondary)] italic">
                         Price estimates unavailable for these specific items.
                       </p>
                     )}
-                    <p className="text-[11px] text-[var(--text-muted)]">
+                    <p className="text-sm text-[var(--text-secondary)]">
                       Approximate market value of what you already have that is used in these recipes (estimate).
                     </p>
                   </div>
@@ -3601,33 +3546,33 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 {/* "Not used yet" Section */}
                 <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
                       {notUsedUserIngredients.length > 0
                         ? `Not used yet (${notUsedUserIngredients.length})`
                         : "All ingredients used"}
                     </span>
                     {notUsedUserIngredients.length > 0 && (
-                      <span className="text-[11px] text-[var(--text-muted)]">
+                      <span className="text-sm text-[var(--text-secondary)]">
                         Remaining in your kitchen for other meals
                       </span>
                     )}
                   </div>
 
                   {notUsedUserIngredients.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {notUsedUserIngredients.map((item, idx) => (
                         <span
                           key={idx}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                          className="min-h-[44px] inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span className="w-2 h-2 rounded-full bg-[#F28A1B] shrink-0" />
                           <span>{item.name}</span>
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-[#1F5C3A] dark:text-[#86EFAC] font-medium flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <p className="text-sm text-[#1F6B3B] dark:text-[#86EFAC] font-medium flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
                       <span>Every single ingredient from your confirmed kitchen list is used in this meal plan!</span>
                     </p>
                   )}
@@ -3638,35 +3583,35 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   <button
                     type="button"
                     onClick={() => setShowSavingsInfo(!showSavingsInfo)}
-                    className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="min-h-[44px] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-2 transition-colors cursor-pointer"
                   >
-                    <Info className="w-3.5 h-3.5 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                    <Info className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                     <span className="underline decoration-dotted underline-offset-2 font-medium">
                       How we calculate this
                     </span>
                     <ChevronDown
-                      className={`w-3 h-3 transition-transform duration-200 shrink-0 ${
+                      className={`w-4 h-4 transition-transform duration-200 shrink-0 ${
                         showSavingsInfo ? "rotate-180" : ""
                       }`}
                     />
                   </button>
 
                   {showSavingsInfo && (
-                    <div className="mt-2.5 p-3.5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-2.5 text-xs text-[var(--text-secondary)]">
+                    <div className="mt-2.5 p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-3 text-sm text-[var(--text-secondary)]">
                       <div>
-                        <p className="font-semibold text-[var(--text-primary)] mb-0.5">
+                        <p className="font-semibold text-[var(--text-primary)] mb-1">
                           1. Ingredients used % formula
                         </p>
-                        <p className="text-[11px] leading-relaxed">
+                        <p className="text-sm leading-relaxed">
                           <code>(Unique kitchen ingredients used in displayed recipes ÷ Total confirmed kitchen ingredients) × 100</code>.
                           We examine every ingredient in your confirmed kitchen list and check whether it appears in the ingredient lines, missing items, or preparation steps of any recipe currently displayed.
                         </p>
                       </div>
                       <div>
-                        <p className="font-semibold text-[var(--text-primary)] mb-0.5">
+                        <p className="font-semibold text-[var(--text-primary)] mb-1">
                           2. Value of ingredients you&apos;re using formula
                         </p>
-                        <p className="text-[11px] leading-relaxed">
+                        <p className="text-sm leading-relaxed">
                           <code>Sum of approximate local market prices for all used ingredients in {selectedCity}</code>.
                           This is the approximate market value of what you already have, not a comparison against a specific purchase.
                           Prices are rough estimates and have not been formally reviewed. They will be updated and verified regularly. If an ingredient has no price in our table, it is left out of the sum and marked &quot;some prices unavailable&quot;. If there is not enough price data, the value figure is hidden rather than guessed.
@@ -3682,60 +3627,60 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
                   <button
                     onClick={() => setActiveTab("quick")}
-                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-xs sm:text-sm font-semibold cursor-pointer ${
+                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-sm font-semibold cursor-pointer ${
                       activeTab === "quick"
-                        ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                        ? "bg-[#1F6B3B] text-white shadow-sm dark:bg-[#287A4D]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)]"
                     }`}
                   >
                     <Zap className="w-4 h-4 shrink-0" />
                     <span>Quick Meals (≤20m)</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === "quick" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
+                    <span className={`text-sm px-2.5 py-0.5 rounded-full ${activeTab === "quick" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
                       {quickRecipes.length}
                     </span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab("proper")}
-                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-xs sm:text-sm font-semibold cursor-pointer ${
+                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-sm font-semibold cursor-pointer ${
                       activeTab === "proper"
-                        ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                        ? "bg-[#1F6B3B] text-white shadow-sm dark:bg-[#287A4D]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)]"
                     }`}
                   >
                     <Utensils className="w-4 h-4 shrink-0" />
                     <span>Proper Cooking</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === "proper" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
+                    <span className={`text-sm px-2.5 py-0.5 rounded-full ${activeTab === "proper" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
                       {properRecipes.length}
                     </span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab("ingredients")}
-                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-xs sm:text-sm font-semibold cursor-pointer ${
+                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-sm font-semibold cursor-pointer ${
                       activeTab === "ingredients"
-                        ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                        ? "bg-[#1F6B3B] text-white shadow-sm dark:bg-[#287A4D]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)]"
                     }`}
                   >
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>Ingredients</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === "ingredients" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
+                    <span className={`text-sm px-2.5 py-0.5 rounded-full ${activeTab === "ingredients" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
                       {data.detected_items.length}
                     </span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab("shopping")}
-                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-xs sm:text-sm font-semibold cursor-pointer ${
+                    className={`min-h-[44px] px-4 py-2 flex items-center justify-center gap-2 rounded-xl transition-all whitespace-nowrap text-sm font-semibold cursor-pointer ${
                       activeTab === "shopping"
-                        ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                        ? "bg-[#1F6B3B] text-white shadow-sm dark:bg-[#287A4D]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-subtle)]"
                     }`}
                   >
                     <ShoppingCart className="w-4 h-4 shrink-0" />
                     <span>Shopping</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${activeTab === "shopping" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
+                    <span className={`text-sm px-2.5 py-0.5 rounded-full ${activeTab === "shopping" ? "bg-white/20 text-white" : "bg-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>
                       {data.shopping_list.length}
                     </span>
                   </button>
@@ -3744,19 +3689,19 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
               {/* Economic Tier Filter Bar */}
               {(activeTab === "quick" || activeTab === "proper") && (
-                <div className="chop-card p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="chop-card p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
                   <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                    <Wallet className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
-                    <span className="font-semibold text-xs sm:text-sm">Economic Tier:</span>
+                    <Wallet className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
+                    <span className="font-semibold text-sm">Economic Tier:</span>
                   </div>
 
                   <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setTierFilter("all")}
-                      className={`min-h-[38px] px-3.5 py-1.5 rounded-xl transition-all font-medium text-xs text-center flex items-center justify-center active:scale-95 cursor-pointer ${
+                      className={`min-h-[44px] px-4 py-2 rounded-xl transition-all font-semibold text-sm text-center flex items-center justify-center active:scale-95 cursor-pointer ${
                         tierFilter === "all"
-                          ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                          ? "bg-[#D9381E] text-white shadow-sm"
                           : "bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       }`}
                     >
@@ -3769,26 +3714,26 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     <button
                       type="button"
                       onClick={() => setTierFilter("budget")}
-                      className={`min-h-[38px] px-3.5 py-1.5 rounded-xl transition-all font-medium text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
+                      className={`min-h-[44px] px-4 py-2 rounded-xl transition-all font-semibold text-sm text-center flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
                         tierFilter === "budget"
-                          ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                          ? "bg-[#D9381E] text-white shadow-sm"
                           : "bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       }`}
                     >
-                      <Coins className="w-3.5 h-3.5 shrink-0" />
+                      <Coins className="w-4 h-4 shrink-0" />
                       <span>Budget</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setTierFilter("comfortable")}
-                      className={`min-h-[38px] px-3.5 py-1.5 rounded-xl transition-all font-medium text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
+                      className={`min-h-[44px] px-4 py-2 rounded-xl transition-all font-semibold text-sm text-center flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
                         tierFilter === "comfortable"
-                          ? "bg-[#1F5C3A] text-white shadow-sm dark:bg-[#287A4D]"
+                          ? "bg-[#D9381E] text-white shadow-sm"
                           : "bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                       }`}
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-[#E8590C] shrink-0" />
+                      <Sparkles className="w-4 h-4 text-[#F28A1B] shrink-0" />
                       <span>Comfortable</span>
                     </button>
                   </div>
@@ -3799,7 +3744,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               {(activeTab === "quick" || activeTab === "proper") && (
                 <div className="space-y-6">
                   {displayedRecipes.length === 0 ? (
-                    <div className="chop-card p-8 text-center text-xs text-[var(--text-muted)]">
+                    <div className="chop-card p-8 text-center text-sm text-[var(--text-secondary)]">
                       No recipes found matching the selected financial filter. Try choosing &quot;All&quot;.
                     </div>
                   ) : (
@@ -3860,7 +3805,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                               <button
                                 onClick={() => handleCopyRecipe(recipe, idx)}
                                 title="Copy recipe details"
-                                className="min-h-[38px] px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-xs flex items-center gap-1.5 active:scale-95 shrink-0 cursor-pointer"
+                                className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm flex items-center gap-2 active:scale-95 shrink-0 cursor-pointer"
                               >
                                 {copiedRecipeIndex === idx ? (
                                   <>
@@ -3882,21 +3827,21 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           </div>
 
                           {/* Meta Specs Bar */}
-                          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 text-xs text-[var(--text-secondary)]">
+                          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 text-sm text-[var(--text-secondary)]">
                             <span className="flex items-center justify-center sm:justify-start gap-1.5 bg-[var(--bg-surface-subtle)] p-2.5 sm:px-3.5 sm:py-2 rounded-xl border border-[var(--border-subtle)] font-medium">
-                              <Clock className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                              <Clock className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                               <span className="truncate">{recipe.prep_time_minutes + recipe.cook_time_minutes}m total</span>
                             </span>
                             <span className="flex items-center justify-center sm:justify-start gap-1.5 bg-[var(--bg-surface-subtle)] p-2.5 sm:px-3.5 sm:py-2 rounded-xl border border-[var(--border-subtle)] font-medium">
-                              <Flame className="w-4 h-4 text-[#D94F04] shrink-0" />
+                              <Flame className="w-4 h-4 text-[#D9381E] shrink-0" />
                               <span className="truncate">{recipe.difficulty}</span>
                             </span>
                             <span className="flex items-center justify-center sm:justify-start gap-1.5 bg-[var(--bg-surface-subtle)] p-2.5 sm:px-3.5 sm:py-2 rounded-xl border border-[var(--border-subtle)] font-medium">
-                              <Utensils className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                              <Utensils className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                               <span className="truncate">{recipe.servings} Servings</span>
                             </span>
                             <span className="flex items-center justify-center sm:justify-start gap-1.5 bg-[var(--bg-surface-subtle)] p-2.5 sm:px-3.5 sm:py-2 rounded-xl border border-[var(--border-subtle)] font-medium">
-                              <Tag className="w-4 h-4 text-[#1F5C3A] dark:text-[#86EFAC] shrink-0" />
+                              <Tag className="w-4 h-4 text-[#1F6B3B] dark:text-[#86EFAC] shrink-0" />
                               <span className="truncate">
                                 {recipe.fridge_ingredients_used.length} of {data?.detected_items?.length || recipe.fridge_ingredients_used.length} used
                               </span>
@@ -3910,23 +3855,23 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
                           {/* Assumption Line (Requirement 3) */}
                           {recipe.assumes && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-medium">
-                              <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <div className="min-h-[44px] flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 text-[#2B1810] dark:text-amber-200 text-sm font-medium">
+                              <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                               <span>{recipe.assumes.startsWith("Assumes:") ? recipe.assumes : `Assumes: ${recipe.assumes}`}</span>
                             </div>
                           )}
 
                           {/* Reasoning Box */}
                           {recipe.why_this_recipe && (
-                            <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-xs flex items-start gap-3 shadow-sm">
+                            <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-sm flex items-start gap-3 shadow-sm">
                               <div className="w-6 h-6 rounded-lg bg-[var(--primary-subtle)] text-[var(--primary-text)] flex items-center justify-center shrink-0 mt-0.5 border border-[var(--primary-border)]">
-                                <Sparkles className="w-3.5 h-3.5 text-[#E8590C]" />
+                                <Sparkles className="w-3.5 h-3.5 text-[#F28A1B]" />
                               </div>
                               <div className="space-y-1 min-w-0">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-[#1F5C3A] dark:text-[#86EFAC] flex items-center gap-1">
+                                <span className="text-sm font-semibold uppercase tracking-wider text-[#1F6B3B] dark:text-[#86EFAC] flex items-center gap-1">
                                   Why this works
                                 </span>
-                                <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed font-sans">
+                                <p className="text-sm text-[var(--text-secondary)] leading-relaxed font-sans">
                                   {recipe.why_this_recipe}
                                 </p>
                               </div>
@@ -3938,44 +3883,44 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                             {/* Used from Kitchen */}
                             <div className="p-4 sm:p-5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--primary-border)]">
                               <div className="flex items-center justify-between mb-2.5">
-                                <p className="text-xs sm:text-sm font-semibold text-[#1F5C3A] dark:text-[#86EFAC] flex items-center gap-2 uppercase tracking-wider">
+                                <p className="text-sm font-semibold text-[#1F6B3B] dark:text-[#86EFAC] flex items-center gap-2 uppercase tracking-wider">
                                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                                   Used from Your Kitchen:
                                 </p>
-                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--primary-subtle)] text-[var(--primary-text)] border border-[var(--primary-border)]">
+                                <span className="text-sm font-semibold px-2.5 py-1 rounded-full bg-[var(--primary-subtle)] text-[var(--text-primary)] border border-[var(--primary-border)]">
                                   {recipe.fridge_ingredients_used.length} of {data?.detected_items?.length || recipe.fridge_ingredients_used.length} used
                                 </span>
                               </div>
-                              <ul className="text-xs sm:text-sm text-[var(--text-secondary)] space-y-2 font-sans">
+                              <ul className="text-sm text-[var(--text-secondary)] space-y-2 font-sans">
                                 {recipe.fridge_ingredients_used.length > 0 ? (
                                   recipe.fridge_ingredients_used.map((item, i) => (
                                     <li key={i} className="flex items-start gap-2">
-                                      <span className="w-2 h-2 rounded-full bg-[#1F5C3A] dark:bg-[#86EFAC] mt-1.5 shrink-0" />
+                                      <span className="w-2 h-2 rounded-full bg-[#1F6B3B] dark:bg-[#86EFAC] mt-1.5 shrink-0" />
                                       <span>{item}</span>
                                     </li>
                                   ))
                                 ) : (
-                                  <li className="text-[var(--text-muted)] italic text-xs">Custom staples selected</li>
+                                  <li className="text-[var(--text-secondary)] italic text-sm">Custom staples selected</li>
                                 )}
                               </ul>
                             </div>
 
                             {/* Extra Items Needed */}
                             <div className="p-4 sm:p-5 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--accent-border)]">
-                              <p className="text-xs sm:text-sm font-semibold text-[#D94F04] dark:text-[#FDBA74] mb-2.5 flex items-center gap-2 uppercase tracking-wider">
+                              <p className="text-sm font-semibold text-[#D9381E] dark:text-[#FDBA74] mb-2.5 flex items-center gap-2 uppercase tracking-wider">
                                 <ShoppingCart className="w-4 h-4 shrink-0" />
                                 Extra Items Needed:
                               </p>
-                              <ul className="text-xs sm:text-sm text-[var(--text-secondary)] space-y-2 font-sans">
+                              <ul className="text-sm text-[var(--text-secondary)] space-y-2 font-sans">
                                 {recipe.missing_ingredients_needed.length > 0 ? (
                                   recipe.missing_ingredients_needed.map((item, i) => (
                                     <li key={i} className="flex items-start gap-2">
-                                      <span className="w-2 h-2 rounded-full bg-[#E8590C] mt-1.5 shrink-0" />
+                                      <span className="w-2 h-2 rounded-full bg-[#F28A1B] mt-1.5 shrink-0" />
                                       <span>{item}</span>
                                     </li>
                                   ))
                                 ) : (
-                                  <li className="text-[var(--text-muted)] italic text-xs sm:text-sm">100% ready with what you already have!</li>
+                                  <li className="text-[var(--text-secondary)] italic text-sm">100% ready with what you already have!</li>
                                 )}
                               </ul>
                             </div>
@@ -3984,15 +3929,15 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           {/* Step-by-Step Instructions */}
                           <div className="pt-2">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[var(--text-primary)]">
+                              <h4 className="text-sm font-semibold uppercase tracking-wider text-[var(--text-primary)]">
                                 Preparation Steps
                               </h4>
-                              <span className="text-xs text-[var(--text-muted)] font-medium">
+                              <span className="text-sm text-[var(--text-secondary)] font-medium">
                                 {completedCount} of {totalSteps} done
                               </span>
                             </div>
 
-                            <ol className="space-y-2.5 text-xs text-[var(--text-secondary)]">
+                            <ol className="space-y-2.5 text-sm text-[var(--text-secondary)]">
                               {recipe.instructions.map((step, sIdx) => {
                                 const isChecked = completedSteps[idx]?.has(sIdx) || false;
 
@@ -4010,14 +3955,14 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                                       type="button"
                                       className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border transition-colors mt-0.5 cursor-pointer ${
                                         isChecked
-                                          ? "bg-[#1F5C3A] border-[#1F5C3A] text-white"
-                                          : "border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[#1F5C3A]"
+                                          ? "bg-[#1F6B3B] border-[#1F6B3B] text-white"
+                                          : "border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[#1F6B3B]"
                                       }`}
                                     >
                                       {isChecked ? (
                                         <Check className="w-3.5 h-3.5" />
                                       ) : (
-                                        <span className="text-xs font-semibold text-[var(--text-muted)]">
+                                        <span className="text-sm font-semibold text-[var(--text-secondary)]">
                                           {sIdx + 1}
                                         </span>
                                       )}
@@ -4031,15 +3976,15 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
                           {/* Chef's Pro Tip */}
                           {recipe.chef_tips && (
-                            <div className="p-4 sm:p-5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-xs text-[var(--primary-text)] flex items-start gap-3 shadow-sm">
-                              <div className="w-7 h-7 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="p-4 sm:p-5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] text-sm text-[#2B1810] dark:text-[#FBF5EE] flex items-start gap-3 shadow-sm">
+                              <div className="w-7 h-7 rounded-lg bg-[#D9381E] text-white flex items-center justify-center shrink-0 mt-0.5">
                                 <ChefHat className="w-4 h-4" />
                               </div>
                               <div className="space-y-1">
-                                <span className="font-semibold uppercase tracking-wider text-xs block">
+                                <span className="font-semibold uppercase tracking-wider text-sm block text-[#2B1810] dark:text-[#FBF5EE]">
                                   Chef’s Secret Technique
                                 </span>
-                                <p className="leading-relaxed text-xs sm:text-sm font-sans">{recipe.chef_tips}</p>
+                                <p className="leading-relaxed text-sm font-sans">{recipe.chef_tips}</p>
                               </div>
                             </div>
                           )}
@@ -4058,7 +4003,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
                         Your Kitchen Ingredients
                       </h3>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-sm text-[var(--text-secondary)]">
                         Spotted from your kitchen photo (fridge, pantry, or counter)
                       </p>
                     </div>
@@ -4077,30 +4022,30 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-semibold text-[var(--text-primary)]">{item.name}</p>
                             {item.certainty && (
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 item.certainty === "clear"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  ? "bg-emerald-500/15 text-[#1F6B3B] dark:text-[#86EFAC]"
                                   : item.certainty === "likely"
-                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                  : "bg-red-500/10 text-red-600 dark:text-red-400"
+                                  ? "bg-amber-500/15 text-[#964700] dark:text-[#FDBA74]"
+                                  : "bg-red-500/15 text-[#D9381E] dark:text-[#FCA5A5]"
                               }`}>
                                 {item.certainty}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-[var(--text-muted)] flex items-center gap-2 flex-wrap">
-                            <span>Category: <span className="text-[#1F5C3A] dark:text-[#86EFAC] font-medium">{item.category}</span></span>
+                          <p className="text-sm text-[var(--text-secondary)] flex items-center gap-2 flex-wrap">
+                            <span>Category: <span className="text-[#1F6B3B] dark:text-[#86EFAC] font-medium">{item.category}</span></span>
                             {item.form && <span>• Form: <span className="font-medium text-[var(--text-secondary)]">{item.form}</span></span>}
                             {item.container_state && item.container_state !== "unknown" && <span>• Container: <span className="font-medium text-[var(--text-secondary)]">{item.container_state}</span></span>}
                           </p>
                           {item.alternatives && item.alternatives.length > 0 && (
-                            <p className="text-[11px] text-[var(--text-muted)] italic">
+                            <p className="text-sm text-[var(--text-secondary)] italic">
                               Alternatives: {item.alternatives.join(", ")}
                             </p>
                           )}
                         </div>
                         {item.estimated_quantity && (
-                          <span className="chop-pill chop-pill-neutral text-xs">
+                          <span className="chop-pill chop-pill-neutral text-sm">
                             {item.estimated_quantity}
                           </span>
                         )}
@@ -4118,13 +4063,13 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       <h3 className="text-base sm:text-lg font-semibold text-[var(--text-primary)]">
                         Smart Minimal Shopping List
                       </h3>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-sm text-[var(--text-secondary)]">
                         Only indispensable staples required to unlock all recipes
                       </p>
                     </div>
                     <button
                       onClick={handleCopyShoppingList}
-                      className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#1F5C3A] hover:bg-[#17472D] text-white text-xs font-semibold transition-all flex items-center justify-center gap-2 active:scale-95 self-start sm:self-auto shadow-sm cursor-pointer"
+                      className="min-h-[44px] px-4 py-2 rounded-xl bg-[#1F6B3B] hover:bg-[#18552E] text-white text-sm font-semibold transition-all flex items-center justify-center gap-2 active:scale-95 self-start sm:self-auto shadow-sm cursor-pointer"
                     >
                       {copiedShoppingList ? (
                         <>
@@ -4158,7 +4103,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                             <div
                               className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
                                 isChecked
-                                  ? "bg-[#1F5C3A] border-[#1F5C3A] text-white"
+                                  ? "bg-[#1F6B3B] border-[#1F6B3B] text-white"
                                   : "border-[var(--border-default)] bg-[var(--bg-surface)]"
                               }`}
                             >
@@ -4173,7 +4118,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                                 {item.item}
                               </p>
                               {item.for_recipes.length > 0 && (
-                                <p className="text-xs text-[var(--text-muted)] truncate">
+                                <p className="text-sm text-[var(--text-secondary)] truncate">
                                   Required for: {item.for_recipes.join(", ")}
                                 </p>
                               )}
@@ -4181,7 +4126,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           </div>
 
                           {item.estimated_cost && (
-                            <span className="chop-pill chop-pill-accent tabular-nums shrink-0 text-xs">
+                            <span className="chop-pill chop-pill-accent tabular-nums shrink-0 text-sm">
                               {item.estimated_cost}
                             </span>
                           )}
@@ -4197,7 +4142,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
       </main>
 
       {/* 4. Polished Footer */}
-      <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-page)] py-8 text-xs text-[var(--text-muted)] mt-12">
+      <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-page)] py-8 text-sm text-[var(--text-secondary)] mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
             <div className="w-6 h-6 rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface)] shrink-0 shadow-sm">
@@ -4215,7 +4160,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <span className="text-[var(--text-muted)] hidden md:inline">•</span>
             <span>Meta Global AI Hackathon (Indie Track)</span>
           </div>
-          <div className="flex items-center justify-center gap-3 text-xs">
+          <div className="flex items-center justify-center gap-3 text-sm">
             <span>Powered by Meta Muse Glimmer (30B open-weight)</span>
           </div>
         </div>
@@ -4237,13 +4182,13 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-[var(--primary-subtle)] text-[var(--primary-text)] flex items-center justify-center shrink-0 border border-[var(--primary-border)] shadow-sm">
-                  <ShieldCheck className="w-5 h-5" />
+                  <ShieldCheck className="w-5 h-5 text-[#1F6B3B]" />
                 </div>
                 <div>
                   <h3 className="text-xl font-normal text-[var(--text-primary)]">
                     Why Open-Weight Models?
                   </h3>
-                  <p className="text-xs text-[var(--text-muted)]">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     Why ChopSnap uses open weights instead of closed APIs
                   </p>
                 </div>
@@ -4251,40 +4196,40 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <button
                 type="button"
                 onClick={() => setShowOpenWeightModal(false)}
-                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#D94F04] hover:bg-[var(--bg-surface-subtle)] transition-colors cursor-pointer"
+                className="min-h-[44px] min-w-[44px] rounded-xl text-[var(--text-secondary)] hover:text-[#D9381E] hover:bg-[var(--bg-surface-subtle)] transition-colors cursor-pointer flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* 3 Concrete Pillars */}
-            <div className="space-y-4 text-xs text-[var(--text-secondary)]">
+            <div className="space-y-4 text-sm text-[var(--text-secondary)]">
               <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-1.5">
-                <div className="flex items-center gap-2 font-semibold text-[#1F5C3A] dark:text-[#86EFAC] text-sm">
+                <div className="flex items-center gap-2 font-semibold text-[#1F6B3B] dark:text-[#86EFAC] text-sm">
                   <Coins className="w-4 h-4 shrink-0" />
                   <span>1. Zero Per-Token Tax (Cost)</span>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   Closed commercial APIs charge for every token and uploaded kitchen photo. For Nigerian home cooks and indie apps, API bills can rapidly spiral. Open-weight models run on self-managed servers at fixed, predictable costs.
                 </p>
               </div>
 
               <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-1.5">
-                <div className="flex items-center gap-2 font-semibold text-[#1F5C3A] dark:text-[#86EFAC] text-sm">
+                <div className="flex items-center gap-2 font-semibold text-[#1F6B3B] dark:text-[#86EFAC] text-sm">
                   <Lock className="w-4 h-4 shrink-0" />
                   <span>2. Household Privacy (Privacy)</span>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   Snapshots of your home kitchen, pantry cupboards, and personal food habits never leak to third-party ad brokers or get ingested to train external commercial models. Your kitchen data stays yours.
                 </p>
               </div>
 
               <div className="p-4 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] space-y-1.5">
-                <div className="flex items-center gap-2 font-semibold text-[#E8590C] text-sm">
+                <div className="flex items-center gap-2 font-semibold text-[#D9381E] text-sm">
                   <Cpu className="w-4 h-4 shrink-0" />
                   <span>3. True Independence (Can Be Hosted Ourselves)</span>
                 </div>
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                   Proprietary APIs can change pricing, throttle rate limits, or shut down overnight. With open weights, the software is fully sovereign and can be deployed anywhere—from a cloud GPU to an offline edge machine in Lagos.
                 </p>
               </div>
@@ -4295,7 +4240,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               <button
                 type="button"
                 onClick={() => setShowOpenWeightModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-[#1F5C3A] hover:bg-[#17472D] text-xs font-semibold text-white transition-colors active:scale-95 shadow-sm cursor-pointer"
+                className="min-h-[44px] px-6 py-2.5 rounded-xl bg-[#1F6B3B] hover:bg-[#18552E] text-sm font-semibold text-white transition-colors active:scale-95 shadow-sm cursor-pointer"
               >
                 Got it
               </button>

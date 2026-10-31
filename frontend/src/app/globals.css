@@ -3,76 +3,124 @@
 :root {
   /* =========================================================================
      LIGHT THEME (Default)
-     Warm, appetising, Nigerian, modern:
-     Cream (#FFF8EF), Deep Green (#1F5C3A), Palm-Oil Orange (#E8590C), Dark Brown (#2B1B12)
+     Nigerian Kitchen Warmth:
+     Background #FFF4E4, Surface #FFFBF5, Pepper Red #D9381E,
+     Palm-Oil Orange #F28A1B, Forest Green #1F6B3B, Highlight #F5B83D, Text #2B1810
      ========================================================================= */
-  --bg-page: #FFF8EF;
-  --bg-surface: #FFFFFF;
-  --bg-surface-subtle: #FAF3EA;
-  --bg-surface-hover: #F3E9DD;
+  --bg-page: #FFF4E4;
+  --bg-surface: #FFFBF5;
+  --bg-surface-subtle: #F9EFE2;
+  --bg-surface-hover: #F2E3D2;
   
-  --border-subtle: #EADDCB;
-  --border-default: #DCC9B4;
-  --border-strong: #B49F89;
+  --border-subtle: #EADBCA;
+  --border-default: #DCC8B3;
+  --border-strong: #BD9F85;
 
-  --text-primary: #2B1B12;      /* Contrast on #FFF8EF: 13.6:1 (AAA) */
-  --text-secondary: #5C4537;    /* Contrast on #FFF8EF: 6.2:1 (AA) */
-  --text-muted: #6E5343;        /* Contrast on #FFF8EF: 4.9:1 (AA) */
+  --text-primary: #2B1810;      /* Contrast on #FFF4E4: 15.56:1 (AAA) */
+  --text-secondary: #5C4134;    /* Contrast on #FFF4E4: 7.10:1 (AAA) */
+  --text-muted: #7B6052;        /* Contrast on #FFF4E4: 4.85:1 (AA) */
 
-  --primary: #1F5C3A;           /* Deep Nigerian forest green */
-  --primary-hover: #17472D;
-  --primary-subtle: #EAF4EE;
-  --primary-border: #C1DFC9;
-  --primary-text: #144429;
-  --primary-contrast: #FFFFFF;
+  /* Specified Brand Tokens */
+  --color-primary: #D9381E;    /* Pepper red */
+  --color-primary-hover: #BC2C14;
+  --color-primary-subtle: #FDF0EE;
+  --color-primary-border: #F8C3BB;
+  --color-primary-contrast: #FFFFFF;
 
-  --accent: #D94F04;            /* Palm-oil orange */
-  --accent-hover: #BF4300;
-  --accent-subtle: #FDF1EA;
-  --accent-border: #F6CEB6;
-  --accent-text: #A83A00;
-  --accent-contrast: #FFFFFF;
+  --color-secondary: #F28A1B;  /* Palm-oil orange */
+  --color-secondary-hover: #D77610;
+  --color-secondary-subtle: #FEF4E8;
+  --color-secondary-border: #FCD9B0;
+  --color-secondary-contrast: #2B1810; /* Dark text for WCAG AA compliance (6.79:1) */
 
-  --card-shadow: 0 4px 18px -2px rgba(43, 27, 18, 0.05), 0 2px 6px -1px rgba(43, 27, 18, 0.03);
-  --card-shadow-hover: 0 10px 28px -4px rgba(43, 27, 18, 0.09), 0 4px 8px -2px rgba(43, 27, 18, 0.04);
+  --color-green: #1F6B3B;      /* Nigerian Forest Green */
+  --color-green-hover: #18552E;
+  --color-green-subtle: #EDF7F1;
+  --color-green-border: #BCE2CB;
+  --color-green-contrast: #FFFFFF; /* White on green: 6.51:1 (AA) */
+
+  --color-highlight: #F5B83D;  /* Warm golden harvest */
+  --color-highlight-subtle: #FEF8EC;
+  --color-highlight-border: #FDE8B5;
+  --color-highlight-contrast: #2B1810; /* Dark text for WCAG AA compliance (9.51:1) */
+
+  /* Legacy mappings mapped cleanly to new palette */
+  --primary: var(--color-primary);
+  --primary-hover: var(--color-primary-hover);
+  --primary-subtle: var(--color-primary-subtle);
+  --primary-border: var(--color-primary-border);
+  --primary-text: var(--color-primary);
+  --primary-contrast: var(--color-primary-contrast);
+
+  --accent: var(--color-secondary);
+  --accent-hover: var(--color-secondary-hover);
+  --accent-subtle: var(--color-secondary-subtle);
+  --accent-border: var(--color-secondary-border);
+  --accent-text: #964700;
+  --accent-contrast: var(--color-secondary-contrast);
+
+  --card-shadow: 0 4px 20px -2px rgba(43, 24, 16, 0.05), 0 2px 6px -1px rgba(43, 24, 16, 0.03);
+  --card-shadow-hover: 0 10px 28px -4px rgba(43, 24, 16, 0.09), 0 4px 10px -2px rgba(43, 24, 16, 0.04);
 }
 
 .dark {
   /* =========================================================================
-     DARK THEME (Warm Charcoal)
-     Comfortable evening Nigerian kitchen:
-     Warm Charcoal (#181513), Warm Stone (#231F1C), Leaf Green (#287A4D), Warm Palm (#E8590C)
-     No harsh cold green-black.
+     DARK THEME (Warm Charcoal #1E1511)
+     Comfortable evening Nigerian kitchen ambiance.
      ========================================================================= */
-  --bg-page: #181513;
-  --bg-surface: #231F1C;
-  --bg-surface-subtle: #2C2723;
-  --bg-surface-hover: #35302B;
+  --bg-page: #1E1511;
+  --bg-surface: #281D18;
+  --bg-surface-subtle: #33261F;
+  --bg-surface-hover: #3E2F27;
 
-  --border-subtle: #36302B;
-  --border-default: #484039;
-  --border-strong: #61564C;
+  --border-subtle: #3C2B22;
+  --border-default: #503A2E;
+  --border-strong: #6B4E3E;
 
-  --text-primary: #F8F3ED;      /* Contrast on #181513: 14.5:1 (AAA) */
-  --text-secondary: #D4C8BC;    /* Contrast on #181513: 8.5:1 (AAA) */
-  --text-muted: #A69789;        /* Contrast on #181513: 4.8:1 (AA) */
+  --text-primary: #FBF5EE;      /* Contrast on #1E1511: 16.57:1 (AAA) */
+  --text-secondary: #D9C8BA;    /* Contrast on #1E1511: 9.20:1 (AAA) */
+  --text-muted: #A89586;        /* Contrast on #1E1511: 5.10:1 (AA) */
 
-  --primary: #287A4D;
-  --primary-hover: #31945D;
-  --primary-subtle: #1D2D22;
-  --primary-border: #2C4E37;
-  --primary-text: #86EFAC;
-  --primary-contrast: #FFFFFF;
+  --color-primary: #D9381E;
+  --color-primary-hover: #EA482E;
+  --color-primary-subtle: #381A15;
+  --color-primary-border: #63251A;
+  --color-primary-contrast: #FFFFFF;
 
-  --accent: #E8590C;
-  --accent-hover: #F26E24;
-  --accent-subtle: #341E13;
-  --accent-border: #5C321C;
+  --color-secondary: #F28A1B;
+  --color-secondary-hover: #FA9A34;
+  --color-secondary-subtle: #3B230E;
+  --color-secondary-border: #6B3C11;
+  --color-secondary-contrast: #1E1511;
+
+  --color-green: #1F6B3B;
+  --color-green-hover: #268047;
+  --color-green-subtle: #14281C;
+  --color-green-border: #1E4D2F;
+  --color-green-contrast: #FFFFFF;
+
+  --color-highlight: #F5B83D;
+  --color-highlight-subtle: #3A2E14;
+  --color-highlight-border: #6B5218;
+  --color-highlight-contrast: #1E1511;
+
+  /* Legacy mappings */
+  --primary: var(--color-primary);
+  --primary-hover: var(--color-primary-hover);
+  --primary-subtle: var(--color-primary-subtle);
+  --primary-border: var(--color-primary-border);
+  --primary-text: #FCA5A5;
+  --primary-contrast: var(--color-primary-contrast);
+
+  --accent: var(--color-secondary);
+  --accent-hover: var(--color-secondary-hover);
+  --accent-subtle: var(--color-secondary-subtle);
+  --accent-border: var(--color-secondary-border);
   --accent-text: #FDBA74;
-  --accent-contrast: #FFFFFF;
+  --accent-contrast: var(--color-secondary-contrast);
 
-  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.25);
-  --card-shadow-hover: 0 12px 30px -4px rgba(0, 0, 0, 0.6), 0 4px 10px -2px rgba(0, 0, 0, 0.35);
+  --card-shadow: 0 4px 22px -2px rgba(0, 0, 0, 0.45), 0 2px 8px -1px rgba(0, 0, 0, 0.28);
+  --card-shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.65), 0 4px 12px -2px rgba(0, 0, 0, 0.38);
 }
 
 @theme inline {
@@ -89,30 +137,39 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
 
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-subtle: var(--primary-subtle);
-  --color-primary-border: var(--primary-border);
-  --color-primary-text: var(--primary-text);
-  --color-primary-contrast: var(--primary-contrast);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-subtle: var(--color-primary-subtle);
+  --color-primary-border: var(--color-primary-border);
+  --color-primary-contrast: var(--color-primary-contrast);
 
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-subtle: var(--accent-subtle);
-  --color-accent-border: var(--accent-border);
-  --color-accent-text: var(--accent-text);
-  --color-accent-contrast: var(--accent-contrast);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-hover: var(--color-secondary-hover);
+  --color-secondary-subtle: var(--color-secondary-subtle);
+  --color-secondary-border: var(--color-secondary-border);
+  --color-secondary-contrast: var(--color-secondary-contrast);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-serif);
+  --color-green: var(--color-green);
+  --color-green-hover: var(--color-green-hover);
+  --color-green-subtle: var(--color-green-subtle);
+  --color-green-border: var(--color-green-border);
+  --color-green-contrast: var(--color-green-contrast);
+
+  --color-highlight: var(--color-highlight);
+  --color-highlight-subtle: var(--color-highlight-subtle);
+  --color-highlight-border: var(--color-highlight-border);
+  --color-highlight-contrast: var(--color-highlight-contrast);
+
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
+  --font-serif: var(--font-heading);
 }
 
 /* =========================================================================
    BASE STYLES & TYPOGRAPHY
-   - 16px minimum body font size
-   - Playfair Display only for headings
-   - Clean sans-serif for body
+   - 16px minimum body font size (WCAG AA requirement)
+   - Fraunces only for headings
+   - Plus Jakarta Sans for body
    ========================================================================= */
 html {
   font-size: 16px;
@@ -122,26 +179,27 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  font-size: 1rem; /* 16px */
+  font-size: 1rem; /* 16px minimum */
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Headings: Playfair Display */
+/* Headings: Fraunces */
 h1, h2, h3, h4, .font-heading {
-  font-family: var(--font-serif), Georgia, serif;
+  font-family: var(--font-heading), Georgia, serif;
   letter-spacing: -0.015em;
+  font-weight: 600;
 }
 
-/* Rounded Cards & Subtle Shadows */
+/* Rounded Cards & Soft Shadows */
 .chop-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 1rem; /* 16px */
+  border-radius: 1.25rem; /* 20px - generous rounding */
   box-shadow: var(--card-shadow);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .chop-card:hover {
@@ -151,38 +209,76 @@ h1, h2, h3, h4, .font-heading {
 .chop-card-subtle {
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-subtle);
-  border-radius: 0.875rem; /* 14px */
+  border-radius: 1rem;
 }
 
-/* Calm, non-monospace pill badges */
+/* Accessible Pill Badges */
 .chop-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  font-size: 0.75rem; /* 12px min */
-  font-weight: 500;
-  line-height: 1rem;
-  padding: 0.25rem 0.625rem;
+  font-size: 0.875rem; /* 14px minimum */
+  font-weight: 600;
+  line-height: 1.25rem;
+  padding: 0.375rem 0.875rem;
+  min-height: 44px; /* Touch target */
   transition: all 0.15s ease;
 }
 
 .chop-pill-primary {
-  background-color: var(--primary-subtle);
-  color: var(--primary-text);
-  border: 1px solid var(--primary-border);
+  background-color: var(--color-primary-subtle);
+  color: #2B1810; /* Dark text for WCAG AA compliance - no red text under 18px on cream or pink */
+  border: 1px solid var(--color-primary-border);
+}
+
+.dark .chop-pill-primary {
+  color: #FBF5EE;
 }
 
 .chop-pill-accent {
-  background-color: var(--accent-subtle);
-  color: var(--accent-text);
-  border: 1px solid var(--accent-border);
+  background-color: var(--color-secondary-subtle);
+  color: #2B1810; /* Dark text for WCAG AA (6.79:1) */
+  border: 1px solid var(--color-secondary-border);
+}
+
+.dark .chop-pill-accent {
+  color: #FBF5EE;
+}
+
+.chop-pill-green {
+  background-color: var(--color-green-subtle);
+  color: #1F6B3B;
+  border: 1px solid var(--color-green-border);
+}
+
+.dark .chop-pill-green {
+  color: #86EFAC;
+}
+
+.chop-pill-highlight {
+  background-color: var(--color-highlight-subtle);
+  color: #2B1810;
+  border: 1px solid var(--color-highlight-border);
+}
+
+.dark .chop-pill-highlight {
+  color: #FDE047;
 }
 
 .chop-pill-neutral {
   background-color: var(--bg-surface-subtle);
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
+}
+
+/* Touch Targets: minimum 44px */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Custom subtle scrollbar */
@@ -201,7 +297,6 @@ h1, h2, h3, h4, .font-heading {
   background: var(--border-strong);
 }
 
-/* Hide scrollbar utility for touch scroll */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

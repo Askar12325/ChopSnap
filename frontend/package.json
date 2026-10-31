@@ -10,6 +10,7 @@
     "test": "node --experimental-strip-types --test src/utils/matching.test.ts"
   },
   "dependencies": {
+    "framer-motion": "^14.9.0",
     "lucide-react": "^1.62.0",
     "next": "15.5.28",
     "react": "19.1.0",
