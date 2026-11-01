@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import {
   Sparkles,
   Utensils,
@@ -47,6 +46,13 @@ import {
   StepHeader,
   ProgressDots,
 } from "../components/ui";
+import { ChopSnapLogo } from "../components/ChopSnapLogo";
+import {
+  AnkaraPatternDefs,
+  AnkaraTopRibbon,
+  AnkaraSectionDivider,
+} from "../components/AnkaraPattern";
+import { HeroIllustration } from "../components/HeroIllustration";
 import {
   isIngredientUsedInRecipes,
   getIngredientPrice,
@@ -940,8 +946,9 @@ export default function Home() {
   const [pipelinePhase, setPipelinePhase] = useState<"vision" | "recipes">("vision");
   const [progressStage, setProgressStage] = useState<number>(1);
 
-  // Real Backend Health Check (/api/health)
+  // Real Backend Health Check (/api/health) & Configured Model
   const [isBackendHealthy, setIsBackendHealthy] = useState<boolean | null>(null);
+  const [configuredRecipeModel, setConfiguredRecipeModel] = useState<string>("Muse Spark Open");
 
   useEffect(() => {
     let isMounted = true;
@@ -951,6 +958,16 @@ export default function Home() {
         const res = await fetch(`${apiUrl}/api/health`, { method: "GET", cache: "no-store" });
         if (isMounted) {
           setIsBackendHealthy(res.ok);
+          if (res.ok) {
+            const healthData = await res.json();
+            const rawModel =
+              healthData?.configured_models?.recipe_reasoning?.model ||
+              healthData?.configured_models?.recipe_reasoning?.architecture;
+            if (rawModel) {
+              const cleaned = rawModel.replace(/meta\/|:.*|\b30b\b/gi, "").replace(/-/g, " ").trim();
+              setConfiguredRecipeModel(cleaned.toLowerCase().includes("muse") ? "Muse Spark Open" : (cleaned || "Muse Spark Open"));
+            }
+          }
         }
       } catch {
         if (isMounted) {
@@ -1473,7 +1490,7 @@ export default function Home() {
 
     const tStage2 = setTimeout(() => {
       setProgressStage(2);
-      setStatusStep("Meta Muse Glimmer formulating authentic recipes…");
+      setStatusStep("Muse Spark Open formulating authentic recipes…");
     }, 400);
 
     const tStage3 = setTimeout(() => {
@@ -2060,6 +2077,12 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
 
   return (
     <div className="min-h-screen bg-transparent text-[var(--text-primary)] flex flex-col justify-between selection:bg-[#1D2B64] selection:text-white overflow-x-hidden">
+      {/* SVG Ankara Pattern Definitions */}
+      <AnkaraPatternDefs />
+
+      {/* Thin Ankara-inspired geometric band along top of the page */}
+      <AnkaraTopRibbon />
+
       {/* 1. Global Navigation Bar */}
       <header className="sticky top-0 z-40 bg-[var(--bg-page)]/95 backdrop-blur-md border-b border-[var(--border-subtle)]">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between gap-2.5">
@@ -2071,14 +2094,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
               className="flex items-center gap-2 focus:outline-none cursor-pointer"
               aria-label="ChopSnap Home"
             >
-              <Image
-                src="/logo.svg"
-                alt="ChopSnap"
-                width={190}
-                height={46}
-                priority
-                className="h-10 sm:h-11 w-auto object-contain shrink-0"
-              />
+              <ChopSnapLogo className="h-9 sm:h-10 w-auto" />
             </button>
             <div className="hidden md:block min-w-0 pl-3 border-l border-[var(--border-subtle)]">
               <p className="text-sm text-[var(--text-secondary)] font-medium truncate">
@@ -2202,17 +2218,32 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
           {/* Left Column: Primary Action */}
           <div className="lg:col-span-6 space-y-4 sm:space-y-5">
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-semibold text-[var(--text-primary)] leading-[1.15] tracking-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-semibold text-[var(--text-primary)] leading-[1.15] tracking-tight animate-hero-headline">
               Cook celebratory Nigerian meals from what’s{" "}
-              <span className="italic text-[#1D2B64] dark:text-[#F9A826]">already in your kitchen.</span>
+              <span className="relative inline-block text-[var(--text-primary)] dark:text-[#F9A826] font-normal dark:italic">
+                <span className="absolute left-0 right-0 bottom-1 h-3 sm:h-3.5 bg-[#F9A826]/35 rounded-sm -z-0 dark:hidden" />
+                <span className="relative z-10">already in your kitchen.</span>
+              </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-snug font-sans">
+            <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-snug font-sans animate-hero-subtext">
               ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.
             </p>
 
+            {/* Mobile-only Focal Illustration (shrinks below headline on 360px phones) */}
+            <div className="lg:hidden my-2 flex justify-center animate-hero-illustration">
+              <HeroIllustration className="max-w-[270px] sm:max-w-[320px]" isMobile />
+            </div>
+
             {/* Streamlined Upload Card */}
-            <div className="chop-card p-4 sm:p-6 relative overflow-hidden shadow-md">
+            <div className="chop-card p-4 sm:p-6 relative overflow-hidden shadow-md animate-hero-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[var(--border-subtle)]">
+                <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Step 1 of 3: Snap
+                </span>
+                <ProgressDots totalSteps={3} currentStep={1} labels={["Snap", "Check", "Plan"]} />
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -2230,7 +2261,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
                       onClick={() => fileInputRef.current?.click()}
-                      className="sm:col-span-3 group border-2 border-dashed border-[var(--border-default)] hover:border-[#1D2B64] dark:hover:border-[#7B8ED8] rounded-2xl p-4 text-center cursor-pointer transition-all duration-200 bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] flex flex-col items-center justify-center min-h-[140px]"
+                      className="sm:col-span-3 group border-2 border-dashed border-[#1D2B64]/30 hover:border-[#1D2B64] dark:border-[#FFF5E1]/50 bg-white hover:bg-[#FAF9F5] dark:bg-[#1E2B60] dark:hover:bg-[#253678] rounded-2xl p-4 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center min-h-[140px]"
                     >
                       <div className="w-11 h-11 mx-auto mb-2 rounded-full bg-[var(--primary-subtle)] border border-[var(--primary-border)] flex items-center justify-center text-[var(--primary-text)] group-hover:scale-105 transition-transform duration-200 shadow-sm">
                         <Camera className="w-5 h-5 text-[#1D2B64] dark:text-[#C8D1F5]" />
@@ -2244,7 +2275,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     </div>
 
                     {/* Speak Mic Action Box (1 col) */}
-                    <div className="sm:col-span-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 flex flex-col items-center justify-between text-center relative overflow-hidden min-h-[140px]">
+                    <div className="sm:col-span-1 rounded-2xl border-2 border-dashed border-[#1D2B64]/30 hover:border-[#1D2B64] dark:border-[#FFF5E1]/40 bg-white dark:bg-[#1E2B60] p-3 flex flex-col items-center justify-between text-center relative overflow-hidden min-h-[140px] transition-colors">
                       <div className="w-full flex items-center justify-between">
                         <span className="text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                           Speak
@@ -2264,12 +2295,16 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-md cursor-pointer active:scale-90 ${
                             isListening
                               ? "bg-rose-600 hover:bg-rose-700 text-white animate-bounce shadow-rose-600/30 ring-4 ring-rose-500/20"
-                              : "bg-[#1D2B64] hover:bg-[#15204C] text-white shadow-[#1D2B64]/25 hover:scale-105"
+                              : "bg-[#1D2B64] hover:bg-[#15204C] text-white dark:bg-[#F9A826] dark:hover:bg-[#E59518] shadow-[#1D2B64]/25 hover:scale-105"
                           }`}
                           title={isListening ? "Press to stop recording" : "Press to start speaking instructions"}
                           aria-label={isListening ? "Stop listening" : "Start voice input"}
                         >
-                          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                          {isListening ? (
+                            <MicOff className="w-5 h-5" />
+                          ) : (
+                            <Mic className="w-5 h-5 text-white dark:text-[#1A1033]" />
+                          )}
                         </button>
                       ) : (
                         <div className="w-11 h-11 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
@@ -2740,9 +2775,14 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             </div>
           </div>
 
-          {/* Right Column: Reserved for redesigned welcome screen */}
-          <div className="hidden lg:block lg:col-span-6" />
+          {/* Right Column: ONE Focal Illustration for Desktop Hero */}
+          <div className="hidden lg:flex lg:col-span-6 items-center justify-center pl-2 lg:pl-6 animate-hero-illustration">
+            <HeroIllustration className="w-full max-w-[460px]" />
+          </div>
         </section>
+
+        {/* Ankara Geometric Pattern Section Divider */}
+        <AnkaraSectionDivider />
 
         {/* ==============================================================
             SECTION 2: HOW IT WORKS
@@ -2804,6 +2844,9 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             </div>
           </div>
         </section>
+
+        {/* Ankara Geometric Pattern Section Divider */}
+        <AnkaraSectionDivider />
 
         {/* ==============================================================
             SECTION 3: TRY AN EXAMPLE
@@ -2902,12 +2945,12 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   stepNumber={2}
                   stepTotal={3}
                   title="Confirm your kitchen ingredients"
-                  description="Meta Muse Glimmer will formulate recipes using only confirmed items. Please check unsure items and tap one-tap choices to confirm."
+                  description="Muse Spark Open will formulate recipes using only confirmed items. Please check unsure items and tap one-tap choices to confirm."
                   className="mb-0"
                 />
 
                 <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
-                  <ProgressDots totalSteps={3} currentStep={2} labels={["Provisions", "Review", "Cook"]} />
+                  <ProgressDots totalSteps={3} currentStep={2} labels={["Snap", "Check", "Plan"]} />
                   <span className="text-sm font-semibold px-3 py-1.5 rounded-full bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
                     {selectedReviewItemIds.size} of {reviewItems.length} selected
                   </span>
@@ -3278,9 +3321,12 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                   </div>
                 </div>
 
-                <span className={`chop-pill ${data.is_demo ? "chop-pill-accent" : "chop-pill-primary"} self-start sm:self-auto`}>
-                  {data.is_demo ? "Demo Mode" : "Real Model Output"}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                  <ProgressDots totalSteps={3} currentStep={3} labels={["Snap", "Check", "Plan"]} />
+                  <span className={`chop-pill ${data.is_demo ? "chop-pill-accent" : "chop-pill-primary"}`}>
+                    {data.is_demo ? "Demo Mode" : "Real Model Output"}
+                  </span>
+                </div>
               </div>
 
               {/* ==========================================================
@@ -4145,14 +4191,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
       <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-page)]/80 backdrop-blur-sm py-8 text-sm text-[var(--text-secondary)] mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-            <div className="w-6 h-6 rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface)] shrink-0 shadow-sm">
-              <Image
-                src="/icon.svg"
-                alt="ChopSnap"
-                width={24}
-                height={24}
-                className="w-full h-full object-cover"
-              />
+            <div className="w-6 h-6 rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface)] shrink-0 shadow-sm flex items-center justify-center p-0.5">
+              <ChopSnapLogo showWordmark={false} className="w-full h-full" />
             </div>
             <span className="text-[var(--text-primary)] font-semibold">ChopSnap</span>
             <span className="text-[var(--text-muted)]">•</span>
@@ -4161,7 +4201,29 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
             <span>Meta Global AI Hackathon (Indie Track)</span>
           </div>
           <div className="flex items-center justify-center gap-3 text-sm">
-            <span>Powered by Meta Muse Glimmer (30B open-weight)</span>
+            <span>
+              Powered by{" "}
+              {(
+                data?.model_metadata?.recipe_model ||
+                configuredRecipeModel ||
+                "Muse Spark Open"
+              )
+                .replace(/meta\/|:.*|\b30b\b/gi, "")
+                .replace(/-/g, " ")
+                .trim()
+                .toLowerCase()
+                .includes("muse")
+                ? "Muse Spark Open"
+                : (
+                    data?.model_metadata?.recipe_model ||
+                    configuredRecipeModel ||
+                    "Muse Spark Open"
+                  )
+                    .replace(/meta\/|:.*|\b30b\b/gi, "")
+                    .replace(/-/g, " ")
+                    .trim() || "Muse Spark Open"}{" "}
+              (open-weight)
+            </span>
           </div>
         </div>
       </footer>

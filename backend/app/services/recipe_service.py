@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 _RECIPE_CACHE = {}
 
 def get_muse_system_prompt(recipe_count: int = 3) -> str:
-    return f"""You are a master Nigerian culinary chef and resourceful home cook powered by Meta's Muse Glimmer (30B open-weight model).
+    return f"""You are a master Nigerian culinary chef and resourceful home cook powered by Muse Spark Open.
 Your mission: Given the household food items detected from the user's photo (from fridge, pantry, or kitchen counter), formulate {recipe_count} authentic Nigerian recipes categorized by meal-type and financial tier:
 
 CRITICAL RECIPE STRUCTURE:
@@ -619,7 +619,7 @@ def apply_fuel_and_spice_adjustments(
 
 class RecipeService:
     """
-    Culinary synthesis service utilizing Meta's Muse Glimmer (30B open-weight model)
+    Culinary synthesis service utilizing Muse Spark Open
     via vLLM, Ollama, or OpenAI-compatible inference with resilient mock fallback.
     """
 
@@ -676,7 +676,7 @@ class RecipeService:
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
             return adjusted_recipes, shopping, "mock_offline", True
 
-        # Attempt live inference with Meta Muse Glimmer 30B
+        # Attempt live inference with Muse Spark Open
         try:
             if settings.MUSE_GLIMMER_PROVIDER == "ollama":
                 raw_recipes, shopping = await self._call_ollama_chat(item_summary, spice_level, cooking_fuel, recipe_count)
@@ -690,10 +690,10 @@ class RecipeService:
             return adjusted_recipes, shopping, mode_str, False
         except Exception as e:
             logger.warning(
-                f"Muse Glimmer 30B inference failed ({type(e).__name__}: {e})."
+                f"Muse Spark Open inference failed ({type(e).__name__}: {e})."
             )
             if settings.INFERENCE_MODE == "live":
-                raise RuntimeError(f"Live Muse Glimmer inference failed: {e}") from e
+                raise RuntimeError(f"Live Muse Spark Open inference failed: {e}") from e
 
             raw_recipes, shopping = self._mock_recipes(detected_items)
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
@@ -717,7 +717,7 @@ class RecipeService:
         )
 
         url = f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/chat/completions"
-        logger.info(f"Dispatching recipe synthesis to Muse Glimmer at {url} (model: {settings.MUSE_GLIMMER_MODEL_NAME}, count: {recipe_count})")
+        logger.info(f"Dispatching recipe synthesis to Muse Spark Open at {url} (model: {settings.MUSE_GLIMMER_MODEL_NAME}, count: {recipe_count})")
 
         payload = {
             "model": settings.MUSE_GLIMMER_MODEL_NAME,
@@ -784,7 +784,7 @@ class RecipeService:
             return self._parse_recipe_json(raw_text)
 
     def _parse_recipe_json(self, raw_text: str) -> Tuple[List[Recipe], List[ShoppingItem]]:
-        """Multi-layer robust JSON parser extracting recipes and shopping list from 30B model output."""
+        """Multi-layer robust JSON parser extracting recipes and shopping list from Muse Spark Open output."""
         cleaned = raw_text.strip()
         match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", cleaned)
         if match:
@@ -810,14 +810,14 @@ class RecipeService:
             if not r.why_this_recipe:
                 ingredients_snippet = ", ".join(r.fridge_ingredients_used[:3])
                 r.why_this_recipe = (
-                    f"Selected by Meta Muse Glimmer to maximize {ingredients_snippet} "
+                    f"Selected by Muse Spark Open to maximize {ingredients_snippet} "
                     f"using resourceful Nigerian cooking principles with minimal waste."
                 )
 
         if not recipes:
             raise ValueError("No valid recipes found in parsed model output.")
 
-        logger.info(f"Successfully synthesized {len(recipes)} Nigerian recipes with Muse Glimmer 30B.")
+        logger.info(f"Successfully synthesized {len(recipes)} Nigerian recipes with Muse Spark Open.")
         return recipes, shopping_list
 
     def _mock_recipes(self, detected_items: List[DetectedItem]) -> Tuple[List[Recipe], List[ShoppingItem]]:

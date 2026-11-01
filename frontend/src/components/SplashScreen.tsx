@@ -103,31 +103,24 @@ export function SplashScreen() {
           <div className="absolute w-24 h-24 rounded-full bg-gradient-to-r from-amber-300/40 via-white/80 to-transparent pointer-events-none blur-xs animate-splash-flash" />
 
           {/* Icon with Spring Scale Pop-in */}
-          <div className="relative z-10 w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#1D2B64] shadow-xl border border-white/20 flex items-center justify-center overflow-hidden animate-splash-icon">
+          <div className="relative z-10 w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#FFF5E1] dark:bg-[#121A3F] shadow-xl border-2 border-[#1D2B64]/20 dark:border-[#FFF5E1]/20 flex items-center justify-center overflow-hidden animate-splash-icon">
             <svg
               viewBox="0 0 64 64"
               className="w-full h-full p-2.5"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <defs>
-                <linearGradient id="splashPotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#2D3E8C" />
-                  <stop offset="100%" stopColor="#15204C" />
-                </linearGradient>
-              </defs>
-
               {/* Pot Handles */}
               <path
                 d="M7 27 C4 27 3.5 32 7 32"
-                stroke="#F9A826"
+                className="stroke-[#1D2B64] dark:stroke-[#FFF5E1]"
                 strokeWidth="3"
                 strokeLinecap="round"
                 fill="none"
               />
               <path
                 d="M45 27 C48 27 48.5 32 45 32"
-                stroke="#F9A826"
+                className="stroke-[#1D2B64] dark:stroke-[#FFF5E1]"
                 strokeWidth="3"
                 strokeLinecap="round"
                 fill="none"
@@ -136,28 +129,25 @@ export function SplashScreen() {
               {/* Pot Body */}
               <path
                 d="M10 24 L11.5 36 C12.5 42.5 17 46 26 46 C35 46 39.5 42.5 40.5 36 L42 24 Z"
-                fill="url(#splashPotGrad)"
-                stroke="#F9A826"
-                strokeWidth="1.6"
+                className="fill-[#1D2B64] dark:fill-[#FFF5E1]"
               />
 
               {/* Pot Rim */}
-              <rect x="8" y="22" width="36" height="4" rx="2" fill="#15204C" stroke="#F9A826" strokeWidth="1" />
+              <rect x="8" y="22" width="36" height="4" rx="2" className="fill-[#1D2B64] dark:fill-[#FFF5E1]" />
 
               {/* Domed Pot Lid */}
-              <path d="M11 22 C13 14 39 14 41 22 Z" fill="#202D68" stroke="#F9A826" strokeWidth="1.4" />
+              <path d="M11 22 C13 14 39 14 41 22 Z" className="fill-[#15204C] dark:fill-[#EFE2C5]" opacity="0.9" />
 
               {/* Lid Knob */}
               <ellipse cx="26" cy="14" rx="4.5" ry="2.4" fill="#F9A826" />
 
-              {/* Camera Aperture Mark on Lid */}
-              <circle cx="26" cy="18.5" r="4.8" fill="#121A3F" stroke="#F9A826" strokeWidth="1.6" />
-              <circle cx="26" cy="18.5" r="1.8" fill="#F9A826" />
-              <line x1="24" y1="16" x2="25.8" y2="17.2" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
-              <line x1="28" y1="16.2" x2="27.4" y2="18" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
-              <line x1="28.6" y1="19.3" x2="27" y2="19.9" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
-              <line x1="24.8" y1="20.8" x2="24.4" y2="19" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
-              <line x1="23.2" y1="18.2" x2="24.8" y2="17.8" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
+              {/* Camera Aperture / Spark Mark on Lid */}
+              <circle cx="26" cy="18.5" r="4.8" fill="#F9A826" />
+              <circle cx="26" cy="18.5" r="2" className="fill-[#1D2B64] dark:fill-[#121A3F]" />
+              <line x1="26" y1="13.2" x2="26" y2="15" stroke="#F9A826" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="26" y1="22" x2="26" y2="23.8" stroke="#F9A826" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="20.7" y1="18.5" x2="22.5" y2="18.5" stroke="#F9A826" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="29.5" y1="18.5" x2="31.3" y2="18.5" stroke="#F9A826" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
           </div>
         </div>
@@ -166,7 +156,7 @@ export function SplashScreen() {
         <div className="space-y-1.5 animate-splash-wordmark">
           <h1 className="text-3xl sm:text-4xl font-heading font-semibold tracking-tight text-[#1A1033] dark:text-[#FFF5E1]">
             <span className="text-[#1D2B64] dark:text-[#FFF5E1]">Chop</span>
-            <span className="text-[#F9A826]">Snap</span>
+            <span className="text-[#B36B00] dark:text-[#F9A826]">Snap</span>
           </h1>
           <p className="text-sm font-sans text-[#453A61] dark:text-[#CEC5B3]">
             Snap your kitchen. Know what to chop.

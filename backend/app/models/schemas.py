@@ -91,8 +91,8 @@ class Recipe(BaseModel):
     missing_ingredients_needed: List[str] = Field(default_factory=list, description="Extra ingredients needed")
     instructions: List[str] = Field(default_factory=list, description="Step-by-step cooking steps")
     why_this_recipe: str = Field(
-        default="Selected by Meta Muse Glimmer to maximize available provisions with authentic Nigerian flavor balance and zero food waste.",
-        description="Reasoning explaining why Meta Muse Glimmer synthesized this dish for the detected ingredients"
+        default="Selected by Muse Spark Open to maximize available provisions with authentic Nigerian flavor balance and zero food waste.",
+        description="Reasoning explaining why Muse Spark Open synthesized this dish for the detected ingredients"
     )
     chef_tips: Optional[str] = Field(
         default="Cook on moderate flame to let aromatic peppers and palm oil bloom without scorching.",
@@ -200,7 +200,7 @@ class Recipe(BaseModel):
         if not why or not str(why).strip():
             ingredients_preview = ", ".join(used[:3]) if used else "staple provisions"
             why = (
-                f"Selected by Meta Muse Glimmer to maximize {ingredients_preview} "
+                f"Selected by Muse Spark Open to maximize {ingredients_preview} "
                 f"using authentic Nigerian flavor balance and zero food waste."
             )
 
@@ -286,7 +286,7 @@ class ProcessResponse(BaseModel):
     model_metadata: dict = Field(
         default_factory=lambda: {
             "vision_model": "Open Vision-Language Model",
-            "recipe_model": "Meta Muse Glimmer (30B open-weight)",
+            "recipe_model": "Muse Spark Open",
             "inference_mode": "auto",
         }
     )

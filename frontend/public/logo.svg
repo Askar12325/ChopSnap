@@ -7,55 +7,64 @@
         font-weight: 900;
         font-size: 32px;
         letter-spacing: -0.02em;
-        fill: #1F5C3A;
+        fill: #1D2B64;
       }
       .brand-snap {
         font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
         font-weight: 900;
         font-size: 32px;
         letter-spacing: -0.02em;
-        fill: #E8590C;
+        fill: #B36B00;
+      }
+      .pot-color {
+        fill: #1D2B64;
+      }
+      .pot-stroke {
+        stroke: #1D2B64;
       }
       :root.dark .brand-chop {
-        fill: #4ADE80;
+        fill: #FFF5E1;
       }
       :root.dark .brand-snap {
-        fill: #FB923C;
+        fill: #F9A826;
+      }
+      :root.dark .pot-color {
+        fill: #FFF5E1;
+      }
+      :root.dark .pot-stroke {
+        stroke: #FFF5E1;
       }
     </style>
-    <linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2D7A50" />
-      <stop offset="100%" stop-color="#1F5C3A" />
-    </linearGradient>
     <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
       <feDropShadow dx="0" dy="1.5" stdDeviation="1" flood-opacity="0.12" />
     </filter>
   </defs>
 
-  <!-- Cooking Pot & Camera Aperture Icon (Left) -->
-  <g transform="translate(3, 4)" filter="url(#subtleShadow)">
-    <!-- Soft icon backdrop badge -->
-    <rect x="0" y="0" width="44" height="44" rx="12" fill="#1F5C3A" />
-    
-    <!-- Pot Body -->
-    <path d="M10 20 L11 31 C11.5 36.5 15.5 39 22 39 C28.5 39 32.5 36.5 33 31 L34 20 Z" fill="#FFFFFF" fill-opacity="0.95" />
-
+  <!-- Cooking Pot & Saffron Spark/Aperture -->
+  <g transform="translate(4, 4)" filter="url(#subtleShadow)">
     <!-- Pot Side Handles -->
-    <path d="M7 23 C5 23 4.5 27 7 27" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" />
-    <path d="M37 23 C39 23 39.5 27 37 27" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" />
+    <path d="M6 23 C4 23 3.5 27 6 27" class="pot-stroke" stroke-width="2.5" stroke-linecap="round" fill="none" />
+    <path d="M38 23 C40 23 40.5 27 38 27" class="pot-stroke" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+    <!-- Pot Body -->
+    <path d="M9 20 L10.5 32 C11.2 37 15 40 22 40 C29 40 32.8 37 33.5 32 L35 20 Z" class="pot-color" />
 
     <!-- Pot Rim -->
-    <rect x="8" y="18" width="28" height="3.2" rx="1.6" fill="#FFFFFF" />
+    <rect x="7.5" y="18" width="29" height="3.5" rx="1.75" class="pot-color" />
 
     <!-- Domed Pot Lid -->
-    <path d="M10 18 C12 11 32 11 34 18 Z" fill="#E8590C" />
+    <path d="M10 18 C12 11 32 11 34 18 Z" class="pot-color" opacity="0.88" />
 
     <!-- Lid Knob -->
-    <ellipse cx="22" cy="11" rx="4" ry="2" fill="#FFFFFF" />
+    <ellipse cx="22" cy="11" rx="4" ry="2" fill="#F9A826" />
 
-    <!-- Camera Aperture Mark on Lid -->
-    <circle cx="22" cy="15" r="3.2" fill="#1F5C3A" stroke="#FFFFFF" stroke-width="1.2" />
-    <circle cx="22" cy="15" r="1.2" fill="#E8590C" />
+    <!-- Aperture / Spark on Lid -->
+    <circle cx="22" cy="15" r="3.2" fill="#F9A826" />
+    <circle cx="22" cy="15" r="1.4" fill="#1D2B64" />
+    <line x1="22" y1="11" x2="22" y2="12.2" stroke="#F9A826" stroke-width="1.2" stroke-linecap="round" />
+    <line x1="22" y1="17.8" x2="22" y2="19" stroke="#F9A826" stroke-width="1.2" stroke-linecap="round" />
+    <line x1="18.5" y1="15" x2="19.7" y2="15" stroke="#F9A826" stroke-width="1.2" stroke-linecap="round" />
+    <line x1="24.3" y1="15" x2="25.5" y2="15" stroke="#F9A826" stroke-width="1.2" stroke-linecap="round" />
   </g>
 
   <!-- Wordmark "ChopSnap" -->

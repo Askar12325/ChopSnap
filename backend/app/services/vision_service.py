@@ -87,7 +87,7 @@ MOCK_PROFILES = [
 
 class VisionService:
     """
-    Open Vision-Language Model service supporting Qwen2-VL, LLaVA, and Llama-3.2-Vision
+    Open Vision-Language Model service supporting LLaVA and Llama-3.2-Vision
     via Ollama or OpenAI-compatible endpoints with high-resilience fallback.
     """
 
@@ -163,7 +163,7 @@ class VisionService:
             raise ValueError(f"Uploaded file is not a valid decodable image: {e}")
 
     async def _call_ollama_vision(self, b64_image: str) -> List[DetectedItem]:
-        """Calls Ollama with open vision models such as Qwen2-VL, LLaVA, or Llama-3.2-Vision."""
+        """Calls Ollama with open vision models such as LLaVA or Llama-3.2-Vision."""
         endpoint = settings.VISION_ENDPOINT_OVERRIDE or f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/generate"
         logger.info(f"Dispatching vision inference to Ollama at {endpoint} (model: {settings.VISION_MODEL_NAME})")
 

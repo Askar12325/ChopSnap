@@ -4,7 +4,7 @@
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.5_(Turbopack)-black.svg?logo=next.js&logoColor=white)](https://nextjs.org)
-[![Meta Muse Glimmer](https://img.shields.io/badge/Meta_Reasoning-Muse_Glimmer_(30B_Open--Weight)-0866FF.svg?logo=meta&logoColor=white)](https://ai.meta.com)
+[![Muse Spark Open](https://img.shields.io/badge/Reasoning-Muse_Spark_Open_(Open--Weight)-0866FF.svg?logo=meta&logoColor=white)](https://ai.meta.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -14,7 +14,7 @@
 
 **ChopSnap** helps you cook Nigerian meals with the ingredients you already have, within your budget. Users snap a photograph of their **refrigerator, pantry shelf, or kitchen counter**. 
 - An **Open Vision-Language Model** spots raw ingredients, perishables, and cooked leftovers.
-- **Meta’s Muse Glimmer (30B open-weight)** performs culturally grounded culinary reasoning to formulate 4 categorized dishes across **Quick Meals (≤20m)** and **Proper Cooking**, calibrated for both **Everyday Budget** and **Comfortable Living**—complete with clear "Why this works" reasoning and a minimal 2–3 item shopping list.
+- **Muse Spark Open (open-weight)** performs culturally grounded culinary reasoning to formulate 4 categorized dishes across **Quick Meals (≤20m)** and **Proper Cooking**, calibrated for both **Everyday Budget** and **Comfortable Living**—complete with clear "Why this works" reasoning and a minimal 2–3 item shopping list.
 
 ---
 
@@ -57,8 +57,8 @@ Building for the **Indie Track**, relying solely on closed proprietary APIs crea
 - **Zero Per-Token Tax (Cost)**: Closed commercial APIs charge for every single token and uploaded photograph. For everyday households and indie makers, bills spike uncontrollably. Open weights run on self-managed infrastructure at predictable, fixed cost.
 - **Household Privacy (Privacy)**: Snapshots of your home kitchen, pantry staples, and personal food habits never leak to third-party ad brokers or get ingested to train external commercial models.
 - **True Independence (Can Be Hosted Ourselves)**: Proprietary APIs can change pricing, throttle rate limits, or shut down overnight. With open weights, the software is fully sovereign and can be deployed anywhere—from a cloud GPU to an offline edge machine in Lagos.
-- **Meta Muse Glimmer (30B Open-Weight)**:
-  - 30B parameter reasoning depth captures complex cultural nuance without hallucinating Western substitutes.
+- **Muse Spark Open (Open-Weight)**:
+  - Reasoning depth captures complex cultural nuance without hallucinating Western substitutes.
   - Balances ingredient trade-offs (e.g. utilizing retrograded starch in chilled rice to prevent soggy jollof; blooming fermented locust beans in hot oil for authentic umami).
 
 ---
@@ -79,8 +79,8 @@ Building for the **Indie Track**, relying solely on closed proprietary APIs crea
                                     │                    │
                                     ▼                    ▼
    ┌──────────────────────────────────┐        ┌──────────────────────────────────┐
-   │    Open Vision-Language Model    │        │     Meta Muse Glimmer (30B)      │
-   │  (Qwen2-VL / Llama 3.2-Vision)   │        │     (Open-Weight Reasoning)      │
+   │    Open Vision-Language Model    │        │         Muse Spark Open          │
+   │        (Llama 3.2-Vision)        │        │     (Open-Weight Reasoning)      │
    │                                  │        │                                  │
    │  • Detects kitchen ingredients   │        │  • 4-tier Nigerian formulation   │
    │  • Catalogs items & categories   │        │  • Plain-English "Why this works"│
@@ -107,8 +107,8 @@ Building for the **Indie Track**, relying solely on closed proprietary APIs crea
 
 - **Frontend**: Next.js 15 (Turbopack, App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons.
 - **Backend**: FastAPI, Python 3.11, Pydantic v2 (self-healing validation), Uvicorn, Pillow, Httpx.
-- **Reasoning AI**: Meta Muse Glimmer (30B open-weight) via OpenAI-compatible endpoint or Ollama.
-- **Vision AI**: Open Vision-Language Model (Qwen2-VL-7B or Llama-3.2-Vision) via Ollama / vLLM.
+- **Reasoning AI**: Muse Spark Open (open-weight) via OpenAI-compatible endpoint or Ollama.
+- **Vision AI**: Open Vision-Language Model (Llama-3.2-Vision) via Ollama / vLLM.
 - **Fallback Engine**: Pre-calibrated high-fidelity Nigerian culinary dataset guaranteeing reliable demonstration.
 
 ---
@@ -158,7 +158,7 @@ npm run dev
 
 ## 🎪 Demo Mode (Quick Scenario Evaluation)
 
-For judges and developers evaluating the application without spinning up a local 30B GPU cluster, ChopSnap includes a **Curated Scenario Engine**:
+For judges and developers evaluating the application without spinning up a local GPU cluster, ChopSnap includes a **Curated Scenario Engine**:
 
 1. **Quick-Start Launchpad Cards**:
    - 🍅 **Market Haul** *(Fridge)*: Fresh eggs, titus fish, sweet plantains, ugwu leaves, tomatoes.
@@ -184,8 +184,8 @@ ChopSnap includes zero-cost **Snap + Speak** voice input powered by the Web Spee
 
 ## 🔮 Future Improvements
 
-1. **Baseten & Dedicated Inference Hosting**: Deploy quantized Meta Muse Glimmer 30B and Muse Spark Open on cloud serverless infrastructure (Baseten / vLLM) for high-concurrency production serving.
-2. **Fine-Tuned West African Regional LoRA**: Fine-tune Muse Glimmer on regional dialects, local marketplace ingredient naming variations (*efirin*, *nchanwu*, *ata rodo*, *shombo*), and diaspora substitutions.
+1. **Baseten & Dedicated Inference Hosting**: Deploy quantized Muse Spark Open on cloud serverless infrastructure (Baseten / vLLM) for high-concurrency production serving.
+2. **Fine-Tuned West African Regional LoRA**: Fine-tune Muse Spark Open on regional dialects, local marketplace ingredient naming variations (*efirin*, *nchanwu*, *ata rodo*, *shombo*), and diaspora substitutions.
 3. **Receipt & Expiry OCR**: Cross-reference grocery receipts with shelf photos to monitor ingredient freshness and prompt cooking reminders before spoilage.
 4. **WhatsApp & SMS Export**: 1-click sharing of the minimal shopping list directly to local open-market vendors or family shoppers via WhatsApp.
 5. **Ingredients Used & Value of Ingredients You're Using**:

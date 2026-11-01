@@ -17,7 +17,7 @@ recipe_service = RecipeService()
 async def health_check():
     """
     System health check and live model connectivity diagnostics.
-    Tests reachability of Ollama and Muse Glimmer endpoints.
+    Tests reachability of Ollama and Muse Spark Open endpoints.
     """
     ollama_reachable = False
     muse_reachable = False
@@ -30,7 +30,7 @@ async def health_check():
         except Exception:
             ollama_reachable = False
 
-        # Check Muse Glimmer endpoint
+        # Check Muse Spark Open endpoint
         try:
             res = await client.get(f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/models")
             muse_reachable = res.status_code == 200
@@ -54,7 +54,7 @@ async def health_check():
                 "model": settings.MUSE_GLIMMER_MODEL_NAME,
                 "endpoint": settings.MUSE_GLIMMER_ENDPOINT,
                 "reachable": muse_reachable,
-                "architecture": "Meta 30B Open-Weight Reasoning Model",
+                "architecture": "Muse Spark Open Reasoning Model",
             },
         },
     }
@@ -68,7 +68,7 @@ async def get_demo_recipes(
 ):
     """
     Dedicated endpoint for Demo Mode:
-    Returns curated authentic Nigerian provisions and 4-tier Muse Glimmer recipes in <10ms.
+    Returns curated authentic Nigerian provisions and 4-tier Muse Spark Open recipes in <10ms.
     """
     clean_type = sample_type.lower()
     detected_items, vision_mode, _ = await vision_service.detect_ingredients(b"", sample_type=clean_type, is_demo=True)
@@ -128,7 +128,7 @@ async def get_demo_recipes(
             "is_demo_mode": True,
             "demo_scenario": profile_label,
             "vision_engine": "Curated Nigerian Vision Profile",
-            "recipe_engine": "Meta Muse Glimmer (30B) Pre-Calibrated Nigerian Culinary Engine",
+            "recipe_engine": "Muse Spark Open Pre-Calibrated Nigerian Culinary Engine",
         }
     )
 
@@ -144,8 +144,8 @@ async def process_fridge_image(
     """
     Core pipeline:
     1. Receives fridge/household provisions photo upload.
-    2. Open Vision Model (Qwen2-VL, LLaVA, Llama-3.2-Vision) identifies food items.
-    3. Meta's Muse Glimmer (30B open-weight) synthesizes authentic zero-waste
+    2. Open Vision Model identifies food items.
+    3. Muse Spark Open synthesizes authentic zero-waste
        Nigerian recipes that maximize provisions + outputs a short shopping list.
     4. Automatically falls back cleanly to high-fidelity mock data if local GPU is offline.
     5. If demo=true or file is a demo sample, responds instantly with curated verified data.
@@ -220,7 +220,7 @@ async def process_fridge_image(
                 }
             )
 
-        # Step 2: Muse Glimmer 30B culinary reasoning & maximization (3 recipes first for <10s response)
+        # Step 2: Muse Spark Open culinary reasoning & maximization (3 recipes first for <10s response)
         recipes, shopping_list, recipe_mode, is_recipe_mock = await recipe_service.generate_recipes(
             detected_items,
             sample_type=resolved_sample_type,
