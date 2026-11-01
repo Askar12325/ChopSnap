@@ -12,8 +12,6 @@ export function HeroIllustration({
   const rawId = useId();
   const idSafe = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
   const clipId = `heroPotLidClip_${idSafe}`;
-  const potGradLightId = `potBodyGradLight_${idSafe}`;
-  const potGradDarkId = `potBodyGradDark_${idSafe}`;
 
   return (
     <div
@@ -69,20 +67,6 @@ export function HeroIllustration({
         className="relative z-10 w-full h-full max-h-[92%] object-contain drop-shadow-sm"
       >
         <defs>
-          {/* Pot Body Gradient - Light Mode */}
-          <linearGradient id={potGradLightId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#253578" />
-            <stop offset="55%" stopColor="#1D2B64" />
-            <stop offset="100%" stopColor="#121C42" />
-          </linearGradient>
-
-          {/* Pot Body Gradient - Dark Mode */}
-          <linearGradient id={potGradDarkId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#283875" />
-            <stop offset="60%" stopColor="#1A2554" />
-            <stop offset="100%" stopColor="#101738" />
-          </linearGradient>
-
           {/* Domed Lid Clip Path */}
           <clipPath id={clipId}>
             <path d="M74 122 C84 56 276 56 286 122 Z" />
@@ -99,60 +83,72 @@ export function HeroIllustration({
           className="text-black/10 dark:text-black/35"
         />
 
-        {/* Pot Side Handles */}
-        {/* Left Handle */}
+        {/* Pot Side Handles — Loop seamlessly attached to the body's edge with no gap */}
+        {/* Left Handle Loop */}
         <path
-          d="M66 142 C38 142 35 174 66 174"
+          d="M86 142 C40 142 40 176 92 176"
           className="stroke-[#1D2B64] dark:stroke-[#FFF5E1]"
           strokeWidth="7"
           strokeLinecap="round"
           fill="none"
         />
         <path
-          d="M66 145 C44 145 42 171 66 171"
+          d="M86 146 C50 146 50 172 90 172"
           stroke="#F9A826"
           strokeWidth="2.5"
           strokeLinecap="round"
           fill="none"
         />
 
-        {/* Right Handle */}
+        {/* Right Handle Loop */}
         <path
-          d="M294 142 C322 142 325 174 294 174"
+          d="M274 142 C320 142 320 176 268 176"
           className="stroke-[#1D2B64] dark:stroke-[#FFF5E1]"
           strokeWidth="7"
           strokeLinecap="round"
           fill="none"
         />
         <path
-          d="M294 145 C316 145 318 171 294 171"
+          d="M274 146 C310 146 310 172 270 172"
           stroke="#F9A826"
           strokeWidth="2.5"
           strokeLinecap="round"
           fill="none"
         />
 
-        {/* Pot Body */}
+        {/* Pot Body: Flat fills, lighter than panel in dark mode (#2D3E8C with cream outline), indigo in light mode */}
+        {/* Light mode: Flat Brand Indigo #1D2B64 */}
         <path
           d="M82 124 L94 186 C102 216 134 228 180 228 C226 228 258 216 266 186 L278 124 Z"
-          fill={`url(#${potGradLightId})`}
+          fill="#1D2B64"
           className="dark:hidden"
         />
+        {/* Dark mode: Lighter Indigo #2D3E8C with Cream Outline */}
         <path
           d="M82 124 L94 186 C102 216 134 228 180 228 C226 228 258 216 266 186 L278 124 Z"
-          fill={`url(#${potGradDarkId})`}
+          fill="#2D3E8C"
           stroke="#FFF5E1"
-          strokeWidth="1.5"
+          strokeWidth="2"
           className="hidden dark:block"
         />
 
-        {/* Pot Belly Sheen Highlight */}
+        {/* Pot Belly Soft Highlight */}
         <path
           d="M106 182 C120 206 150 216 180 216 C210 216 240 206 254 182"
           stroke="#FFFFFF"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
-          strokeOpacity="0.15"
+          strokeOpacity="0.2"
+          className="dark:hidden"
+          fill="none"
+        />
+        <path
+          d="M106 182 C120 206 150 216 180 216 C210 216 240 206 254 182"
+          stroke="#FFF5E1"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeOpacity="0.28"
+          className="hidden dark:block"
           fill="none"
         />
 
@@ -163,7 +159,7 @@ export function HeroIllustration({
           width="216"
           height="12"
           rx="6"
-          className="fill-[#15204C] dark:fill-[#202D68] stroke-[#F9A826]"
+          className="fill-[#15204C] dark:fill-[#374CA5] stroke-[#F9A826] dark:stroke-[#FFF5E1]"
           strokeWidth="1.5"
         />
 

@@ -2218,11 +2218,11 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
           {/* Left Column: Primary Action */}
           <div className="lg:col-span-6 space-y-4 sm:space-y-5">
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-semibold text-[var(--text-primary)] leading-[1.15] tracking-tight animate-hero-headline">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-heading font-semibold text-[var(--text-primary)] leading-[1.15] tracking-tight animate-hero-headline [text-wrap:balance] max-w-xl lg:max-w-none">
               Cook celebratory Nigerian meals from what’s{" "}
               <span className="relative inline-block text-[var(--text-primary)] dark:text-[#F9A826] font-normal dark:italic">
                 <span className="absolute left-0 right-0 bottom-1 h-3 sm:h-3.5 bg-[#F9A826]/35 rounded-sm -z-0 dark:hidden" />
-                <span className="relative z-10">already in your kitchen.</span>
+                <span className="relative z-10 whitespace-nowrap sm:whitespace-normal">already in your kitchen.</span>
               </span>
             </h1>
 
@@ -2598,10 +2598,10 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                       }
                     }}
                     disabled={!typedIngredient.trim()}
-                    className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all ${
                       typedIngredient.trim()
-                        ? "bg-[#1D2B64] hover:bg-[#BC2C14] text-white shadow-sm active:scale-95"
-                        : "bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] cursor-not-allowed opacity-60"
+                        ? "bg-[#1D2B64] hover:bg-[#15204C] text-white shadow-sm active:scale-95 cursor-pointer"
+                        : "bg-[#EAEFFC] text-[#3D4566] dark:bg-[#1C2550] dark:text-[#CBD3EE] border border-[#D0D7EE] dark:border-[#2C3870] cursor-not-allowed select-none"
                     }`}
                   >
                     <Plus className="w-4 h-4" />
@@ -2628,7 +2628,11 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                               : "bg-[var(--bg-surface)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--border-strong)]"
                           }`}
                         >
-                          <Plus className="w-3.5 h-3.5 text-[#A3173A]" />
+                          {isAdded ? (
+                            <Check className="w-3.5 h-3.5 text-[#2E8B57] dark:text-[#86EFAC]" />
+                          ) : (
+                            <Plus className="w-3.5 h-3.5 text-[#1D2B64] dark:text-[#F9A826]" />
+                          )}
                           <span>{sug}</span>
                         </button>
                       );
@@ -3168,7 +3172,11 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                     type="button"
                     onClick={handleAddReviewItem}
                     disabled={!reviewNewItemName.trim()}
-                    className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-default)] text-sm font-semibold text-[var(--text-primary)] disabled:opacity-50 cursor-pointer transition-all flex items-center justify-center gap-2"
+                    className={`w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                      reviewNewItemName.trim()
+                        ? "bg-[#1D2B64] hover:bg-[#15204C] text-white shadow-sm active:scale-95 cursor-pointer"
+                        : "bg-[#EAEFFC] text-[#3D4566] dark:bg-[#1C2550] dark:text-[#CBD3EE] border border-[#D0D7EE] dark:border-[#2C3870] cursor-not-allowed select-none"
+                    }`}
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Item</span>
@@ -3487,9 +3495,13 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
                         type="button"
                         onClick={handleAddIngredient}
                         disabled={!newIngredientName.trim()}
-                        className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl bg-[var(--bg-surface-subtle)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-default)] text-[var(--text-primary)] font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                        className={`w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                          newIngredientName.trim()
+                            ? "bg-[#1D2B64] hover:bg-[#15204C] text-white shadow-sm active:scale-95 cursor-pointer"
+                            : "bg-[#EAEFFC] text-[#3D4566] dark:bg-[#1C2550] dark:text-[#CBD3EE] border border-[#D0D7EE] dark:border-[#2C3870] cursor-not-allowed select-none"
+                        }`}
                       >
-                        <Plus className="w-4 h-4 text-[#A3173A]" />
+                        <Plus className="w-4 h-4" />
                         <span>Add</span>
                       </button>
                     </div>
