@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import cityPricesData from "@/data/prices.json";
 import {
   isIngredientUsedInRecipes,
   getIngredientPrice,
 } from "@/utils/matching";
 import {
+  FlowStep,
   SupportedCity,
   DetectedItem,
   Recipe,
@@ -17,6 +18,88 @@ import {
 import { CLIENT_DEMO_DATA } from "../data/samples";
 
 export function useChopSnapState() {
+  // =========================================================================
+  // Guided Step Flow State (#snap, #check, #plan, #cooking, #results)
+  // =========================================================================
+  const [step, setStep] = useState<FlowStep>("welcome");
+
+  const goTo = useCallback((newStep: FlowStep) => {
+    setStep(newStep);
+    if (typeof window !== "undefined") {
+      const targetHash = newStep === "welcome" ? "" : `#${newStep}`;
+      if (window.location.hash !== targetHash) {
+        if (!targetHash) {
+          if (window.location.hash) {
+            history.pushState(null, "", window.location.pathname + window.location.search);
+          }
+        } else {
+          window.location.hash = targetHash;
+        }
+      }
+    }
+  }, []);
+
+  const goNext = useCallback(() => {
+    setStep((currentStep) => {
+      let nextStep: FlowStep = currentStep;
+      if (currentStep === "welcome") nextStep = "snap";
+      else if (currentStep === "snap") nextStep = "check";
+      else if (currentStep === "check") nextStep = "plan";
+      else if (currentStep === "plan") nextStep = "cooking";
+      else if (currentStep === "cooking") nextStep = "results";
+
+      if (typeof window !== "undefined") {
+        const targetHash = nextStep === "welcome" ? "" : `#${nextStep}`;
+        if (window.location.hash !== targetHash) {
+          if (!targetHash) {
+            history.pushState(null, "", window.location.pathname + window.location.search);
+          } else {
+            window.location.hash = targetHash;
+          }
+        }
+      }
+      return nextStep;
+    });
+  }, []);
+
+  const goBack = useCallback(() => {
+    setStep((currentStep) => {
+      let prevStep: FlowStep = currentStep;
+      if (currentStep === "results") prevStep = "cooking";
+      else if (currentStep === "cooking") prevStep = "plan";
+      else if (currentStep === "plan") prevStep = "check";
+      else if (currentStep === "check") prevStep = "snap";
+      else if (currentStep === "snap") prevStep = "welcome";
+
+      if (typeof window !== "undefined") {
+        const targetHash = prevStep === "welcome" ? "" : `#${prevStep}`;
+        if (window.location.hash !== targetHash) {
+          if (!targetHash) {
+            history.pushState(null, "", window.location.pathname + window.location.search);
+          } else {
+            window.location.hash = targetHash;
+          }
+        }
+      }
+      return prevStep;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const rawHash = window.location.hash.replace("#", "").toLowerCase() as FlowStep;
+      if (["snap", "check", "plan", "cooking", "results"].includes(rawHash)) {
+        setStep(rawHash);
+      } else {
+        setStep("welcome");
+      }
+    };
+
+    handleHashChange();
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -508,6 +591,7 @@ export function useChopSnapState() {
     setSelectedReviewItemIds(initialSelected);
     setIsReviewStep(true);
     setData(null);
+    goTo("check");
     scrollToReview();
   };
 
@@ -640,6 +724,7 @@ export function useChopSnapState() {
       setActiveTab("quick");
       setCompletedSteps({});
       setCheckedShoppingItems(new Set());
+      goTo("plan");
       scrollToResults();
 
       // Non-blocking background fetch for 2 additional variation recipes
@@ -1107,6 +1192,7 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+    goTo("welcome");
   };
 
   const looksClearItems = reviewItems.filter((it) => {
@@ -1318,6 +1404,11 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     handleCopyRecipe,
     handleCopyShoppingList,
     resetAll,
+    step,
+    setStep,
+    goTo,
+    goNext,
+    goBack,
 
     // Derived values
     looksClearItems,

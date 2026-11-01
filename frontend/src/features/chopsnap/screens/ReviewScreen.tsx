@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { Check, AlertCircle, Plus, Utensils, ChefHat, X } from "lucide-react";
+import { Check, AlertCircle, Plus, Utensils, ChefHat, X, ArrowLeft } from "lucide-react";
 import { Button, StepHeader, ProgressDots } from "@/components/ui";
 import { DetectedItem, ProcessResponse } from "../types";
 
 export interface ReviewScreenProps {
-  isReviewStep: boolean;
-  data: ProcessResponse | null;
+  isReviewStep?: boolean;
+  data?: ProcessResponse | null;
   loading: boolean;
   reviewRef: React.RefObject<HTMLDivElement | null>;
   selectedReviewItemIds: Set<string>;
@@ -23,13 +23,12 @@ export interface ReviewScreenProps {
   reviewNewItemQty: string;
   setReviewNewItemQty: (qty: string) => void;
   handleAddReviewItem: () => void;
-  resetAll: () => void;
+  resetAll?: () => void;
   handleConfirmAndCook: () => Promise<void>;
+  onBack?: () => void;
 }
 
 export function ReviewScreen({
-  isReviewStep,
-  data,
   loading,
   reviewRef,
   selectedReviewItemIds,
@@ -45,13 +44,32 @@ export function ReviewScreen({
   reviewNewItemQty,
   setReviewNewItemQty,
   handleAddReviewItem,
-  resetAll,
   handleConfirmAndCook,
+  onBack,
 }: ReviewScreenProps) {
-  if (!isReviewStep || data || loading) return null;
+  if (loading) return null;
 
   return (
-            <div id="review-section" ref={reviewRef} className="chop-card p-5 sm:p-8 shadow-lg border-2 border-[var(--primary-border)] space-y-6">
+    <section className="max-w-4xl mx-auto space-y-6 py-2 sm:py-4">
+      {/* Top Bar: Back Button & Stepper */}
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[44px] px-3.5 py-2 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+        ) : (
+          <span />
+        )}
+
+        <ProgressDots totalSteps={3} currentStep={2} labels={["Snap", "Check", "Plan"]} />
+      </div>
+
+      <div id="review-section" ref={reviewRef} className="chop-card p-5 sm:p-8 shadow-lg border-2 border-[var(--primary-border)] space-y-6">
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
                 <StepHeader
@@ -302,14 +320,17 @@ export function ReviewScreen({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    onClick={resetAll}
-                  >
-                    New scan
-                  </Button>
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                  {onBack && (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={onBack}
+                      icon={<ArrowLeft className="w-4 h-4" />}
+                    >
+                      Back to Snap
+                    </Button>
+                  )}
 
                   <Button
                     variant="primary"
@@ -317,11 +338,13 @@ export function ReviewScreen({
                     onClick={handleConfirmAndCook}
                     disabled={loading || selectedReviewItemIds.size === 0}
                     icon={<Utensils className="w-4 h-4 text-white" />}
+                    className="min-h-[48px] px-8 cursor-pointer shadow-md"
                   >
-                    Confirm and cook
+                    Looks good
                   </Button>
                 </div>
               </div>
             </div>
+    </section>
   );
 }
