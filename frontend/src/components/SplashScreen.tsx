@@ -89,7 +89,7 @@ export function SplashScreen() {
           dismiss();
         }
       }}
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FFF4E4] dark:bg-[#1E1511] cursor-pointer select-none overflow-hidden transition-opacity duration-250 ease-out ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FFF5E1] dark:bg-[#121A3F] cursor-pointer select-none overflow-hidden transition-opacity duration-250 ease-out ${
         phase === "exiting" ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"
       }`}
     >
@@ -97,13 +97,13 @@ export function SplashScreen() {
         {/* Central Logo Container with Shutter Flash Ripple */}
         <div className="relative flex items-center justify-center mb-5">
           {/* Camera-shutter flash ripple (expanding ring) */}
-          <div className="absolute w-24 h-24 rounded-3xl border-2 border-[#D9381E] dark:border-[#F28A1B] pointer-events-none animate-splash-ripple" />
+          <div className="absolute w-24 h-24 rounded-3xl border-2 border-[#1D2B64] dark:border-[#F9A826] pointer-events-none animate-splash-ripple" />
 
           {/* Quick subtle camera flash burst */}
           <div className="absolute w-24 h-24 rounded-full bg-gradient-to-r from-amber-300/40 via-white/80 to-transparent pointer-events-none blur-xs animate-splash-flash" />
 
           {/* Icon with Spring Scale Pop-in */}
-          <div className="relative z-10 w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#111F15] shadow-xl border border-white/20 flex items-center justify-center overflow-hidden animate-splash-icon">
+          <div className="relative z-10 w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-[#1D2B64] shadow-xl border border-white/20 flex items-center justify-center overflow-hidden animate-splash-icon">
             <svg
               viewBox="0 0 64 64"
               className="w-full h-full p-2.5"
@@ -112,22 +112,22 @@ export function SplashScreen() {
             >
               <defs>
                 <linearGradient id="splashPotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#2D7A50" />
-                  <stop offset="100%" stopColor="#1F5C3A" />
+                  <stop offset="0%" stopColor="#2D3E8C" />
+                  <stop offset="100%" stopColor="#15204C" />
                 </linearGradient>
               </defs>
 
               {/* Pot Handles */}
               <path
                 d="M7 27 C4 27 3.5 32 7 32"
-                stroke="#3DA36E"
+                stroke="#F9A826"
                 strokeWidth="3"
                 strokeLinecap="round"
                 fill="none"
               />
               <path
                 d="M45 27 C48 27 48.5 32 45 32"
-                stroke="#3DA36E"
+                stroke="#F9A826"
                 strokeWidth="3"
                 strokeLinecap="round"
                 fill="none"
@@ -137,38 +137,38 @@ export function SplashScreen() {
               <path
                 d="M10 24 L11.5 36 C12.5 42.5 17 46 26 46 C35 46 39.5 42.5 40.5 36 L42 24 Z"
                 fill="url(#splashPotGrad)"
-                stroke="#3DA36E"
+                stroke="#F9A826"
                 strokeWidth="1.6"
               />
 
               {/* Pot Rim */}
-              <rect x="8" y="22" width="36" height="4" rx="2" fill="#2E7D52" stroke="#3DA36E" strokeWidth="1" />
+              <rect x="8" y="22" width="36" height="4" rx="2" fill="#15204C" stroke="#F9A826" strokeWidth="1" />
 
               {/* Domed Pot Lid */}
-              <path d="M11 22 C13 14 39 14 41 22 Z" fill="#1F5C3A" stroke="#3DA36E" strokeWidth="1.4" />
+              <path d="M11 22 C13 14 39 14 41 22 Z" fill="#202D68" stroke="#F9A826" strokeWidth="1.4" />
 
               {/* Lid Knob */}
-              <ellipse cx="26" cy="14" rx="4.5" ry="2.4" fill="#D9381E" />
+              <ellipse cx="26" cy="14" rx="4.5" ry="2.4" fill="#F9A826" />
 
               {/* Camera Aperture Mark on Lid */}
-              <circle cx="26" cy="18.5" r="4.8" fill="#0C1710" stroke="#D9381E" strokeWidth="1.6" />
-              <circle cx="26" cy="18.5" r="1.8" fill="#D9381E" />
-              <line x1="24" y1="16" x2="25.8" y2="17.2" stroke="#F5B83D" strokeWidth="1" strokeLinecap="round" />
-              <line x1="28" y1="16.2" x2="27.4" y2="18" stroke="#F5B83D" strokeWidth="1" strokeLinecap="round" />
-              <line x1="28.6" y1="19.3" x2="27" y2="19.9" stroke="#F5B83D" strokeWidth="1" strokeLinecap="round" />
-              <line x1="24.8" y1="20.8" x2="24.4" y2="19" stroke="#F5B83D" strokeWidth="1" strokeLinecap="round" />
-              <line x1="23.2" y1="18.2" x2="24.8" y2="17.8" stroke="#F5B83D" strokeWidth="1" strokeLinecap="round" />
+              <circle cx="26" cy="18.5" r="4.8" fill="#121A3F" stroke="#F9A826" strokeWidth="1.6" />
+              <circle cx="26" cy="18.5" r="1.8" fill="#F9A826" />
+              <line x1="24" y1="16" x2="25.8" y2="17.2" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
+              <line x1="28" y1="16.2" x2="27.4" y2="18" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
+              <line x1="28.6" y1="19.3" x2="27" y2="19.9" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
+              <line x1="24.8" y1="20.8" x2="24.4" y2="19" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
+              <line x1="23.2" y1="18.2" x2="24.8" y2="17.8" stroke="#FFF5E1" strokeWidth="1" strokeLinecap="round" />
             </svg>
           </div>
         </div>
 
         {/* Wordmark Fading In */}
         <div className="space-y-1.5 animate-splash-wordmark">
-          <h1 className="text-3xl sm:text-4xl font-heading font-semibold tracking-tight text-[#2B1810] dark:text-[#FBF5EE]">
-            <span className="text-[#1F6B3B] dark:text-[#86EFAC]">Chop</span>
-            <span className="text-[#D9381E] dark:text-[#F28A1B]">Snap</span>
+          <h1 className="text-3xl sm:text-4xl font-heading font-semibold tracking-tight text-[#1A1033] dark:text-[#FFF5E1]">
+            <span className="text-[#1D2B64] dark:text-[#FFF5E1]">Chop</span>
+            <span className="text-[#F9A826]">Snap</span>
           </h1>
-          <p className="text-sm font-sans text-[#695346] dark:text-[#C5B5A9]">
+          <p className="text-sm font-sans text-[#453A61] dark:text-[#CEC5B3]">
             Snap your kitchen. Know what to chop.
           </p>
         </div>

@@ -10,7 +10,8 @@ export type ChipVariant =
   | "primary"
   | "secondary"
   | "green"
-  | "highlight";
+  | "highlight"
+  | "zobo";
 
 export interface ChipProps extends Omit<HTMLMotionProps<"button">, "children"> {
   variant?: ChipVariant;
@@ -39,25 +40,26 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
     switch (variant) {
       case "selected":
         variantStyles =
-          "bg-[#D9381E] text-white border-[#D9381E] shadow-sm";
+          "bg-[#1D2B64] dark:bg-[#2D3E8C] text-white border-[#1D2B64] dark:border-[#2D3E8C] shadow-sm";
         break;
       case "primary":
-        // Dark text for WCAG AA compliance (no red text under 18px on cream or pink)
+        // Soft indigo pill
         variantStyles =
-          "bg-[#FDF0EE] dark:bg-[#381A15] text-[#2B1810] dark:text-[#FBF5EE] border-[#F8C3BB] dark:border-[#63251A]";
+          "bg-[#EEF1FC] dark:bg-[#1C2758] text-[#1D2B64] dark:text-[#C8D1F5] border-[#C8D1F5] dark:border-[#3D52A8]";
         break;
       case "secondary":
-        // Dark text for WCAG AA (6.79:1 contrast)
+      case "highlight":
+        // Accent saffron with dark text ink for WCAG AA compliance (9.14:1 contrast)
         variantStyles =
-          "bg-[#FEF4E8] dark:bg-[#3B230E] text-[#2B1810] dark:text-[#FBF5EE] border-[#FCD9B0] dark:border-[#6B3C11]";
+          "bg-[#FEF6E9] dark:bg-[#362810] text-[#1A1033] dark:text-[#FFF5E1] border-[#FCE1AD] dark:border-[#6B4D16]";
         break;
       case "green":
         variantStyles =
-          "bg-[#EDF7F1] dark:bg-[#14281C] text-[#1F6B3B] dark:text-[#86EFAC] border-[#BCE2CB] dark:border-[#1E4D2F]";
+          "bg-[#EAF5EE] dark:bg-[#132E22] text-[#20653E] dark:text-[#86EFAC] border-[#B7DFCA] dark:border-[#1E5038]";
         break;
-      case "highlight":
+      case "zobo":
         variantStyles =
-          "bg-[#FEF8EC] dark:bg-[#3A2E14] text-[#2B1810] dark:text-[#FBF5EE] border-[#FDE8B5] dark:border-[#6B5218]";
+          "bg-[#FDF0F3] dark:bg-[#3A101C] text-[#A3173A] dark:text-[#F7A6B8] border-[#F7C5D0] dark:border-[#661D32]";
         break;
       case "default":
       default:
@@ -77,7 +79,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
         whileTap={interactive ? { scale: 0.96 } : undefined}
         transition={{ type: "spring", stiffness: 500, damping: 28 }}
         onClick={onClick}
-        className={`min-h-[44px] inline-flex items-center gap-2.5 px-4 py-2 rounded-full border text-sm font-semibold select-none transition-colors duration-150 ${variantStyles} ${interactiveClasses} ${className}`}
+        className={`min-h-[44px] inline-flex items-center gap-2.5 px-4 py-2 rounded-full border text-sm font-semibold select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9A826] ${variantStyles} ${interactiveClasses} ${className}`}
         {...props}
       >
         {icon && <span className="shrink-0">{icon}</span>}

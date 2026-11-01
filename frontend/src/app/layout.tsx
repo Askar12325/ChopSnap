@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { MotionProvider } from "../components/MotionProvider";
 import { SplashScreen } from "../components/SplashScreen";
-import { KitchenBackground } from "../components/KitchenBackground";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -57,11 +56,10 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${plusJakarta.variable} ${fraunces.variable} font-sans antialiased min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#D9381E] selection:text-white relative isolate`}
+        className={`${plusJakarta.variable} ${fraunces.variable} font-sans antialiased min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#1D2B64] selection:text-white relative isolate`}
       >
         <MotionProvider>
           <SplashScreen />
-          <KitchenBackground />
           {children}
         </MotionProvider>
       </body>

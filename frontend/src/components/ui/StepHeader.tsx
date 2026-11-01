@@ -7,7 +7,7 @@ export interface StepHeaderProps {
   stepNumber?: number | string;
   stepTotal?: number | string;
   badgeText?: string;
-  badgeVariant?: "primary" | "secondary" | "green" | "highlight";
+  badgeVariant?: "primary" | "secondary" | "green" | "highlight" | "zobo";
   title: string;
   description?: string;
   className?: string;
@@ -22,14 +22,17 @@ export const StepHeader: React.FC<StepHeaderProps> = ({
   description,
   className = "",
 }) => {
-  // Dark text on pale tinted pills (no red text under 18px on cream or pink - WCAG AA)
-  let badgeStyles = "bg-[#FDF0EE] dark:bg-[#381A15] text-[#2B1810] dark:text-[#FBF5EE] border-[#F8C3BB] dark:border-[#63251A]";
-  if (badgeVariant === "secondary") {
-    badgeStyles = "bg-[#FEF4E8] dark:bg-[#3B230E] text-[#2B1810] dark:text-[#FBF5EE] border-[#FCD9B0] dark:border-[#6B3C11]";
+  // Brand indigo, saffron, green, and zobo badges with strict WCAG AA contrast
+  let badgeStyles = "bg-[#EEF1FC] dark:bg-[#1C2758] text-[#1D2B64] dark:text-[#C8D1F5] border-[#C8D1F5] dark:border-[#3D52A8]";
+  if (badgeVariant === "secondary" || badgeVariant === "highlight") {
+    // Saffron with dark text ink
+    badgeStyles = "bg-[#FEF6E9] dark:bg-[#362810] text-[#1A1033] dark:text-[#FFF5E1] border-[#FCE1AD] dark:border-[#6B4D16]";
   } else if (badgeVariant === "green") {
-    badgeStyles = "bg-[#EDF7F1] dark:bg-[#14281C] text-[#1F6B3B] dark:text-[#86EFAC] border-[#BCE2CB] dark:border-[#1E4D2F]";
-  } else if (badgeVariant === "highlight") {
-    badgeStyles = "bg-[#FEF8EC] dark:bg-[#3A2E14] text-[#2B1810] dark:text-[#FDE047] border-[#FDE8B5] dark:border-[#6B5218]";
+    // Success green
+    badgeStyles = "bg-[#EAF5EE] dark:bg-[#132E22] text-[#20653E] dark:text-[#86EFAC] border-[#B7DFCA] dark:border-[#1E5038]";
+  } else if (badgeVariant === "zobo") {
+    // Zobo red accent
+    badgeStyles = "bg-[#FDF0F3] dark:bg-[#3A101C] text-[#A3173A] dark:text-[#F7A6B8] border-[#F7C5D0] dark:border-[#661D32]";
   }
 
   return (

@@ -37,7 +37,7 @@ export const ProgressDots: React.FC<ProgressDotsProps> = ({
             onClick={() => onStepClick?.(step)}
             aria-label={`${label} ${isCurrent ? "(current)" : isCompleted ? "(completed)" : ""}`}
             aria-current={isCurrent ? "step" : undefined}
-            className={`min-h-[44px] min-w-[44px] group flex items-center justify-center gap-2 p-2 rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D9381E] ${
+            className={`min-h-[44px] min-w-[44px] group flex items-center justify-center gap-2 p-2 rounded-full transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F9A826] ${
               onStepClick ? "cursor-pointer" : "cursor-default pointer-events-none"
             }`}
           >
@@ -47,9 +47,9 @@ export const ProgressDots: React.FC<ProgressDotsProps> = ({
                 animate={{
                   width: isCurrent ? 28 : 10,
                   backgroundColor: isCurrent
-                    ? "#D9381E"
+                    ? "#F9A826"
                     : isCompleted
-                    ? "#1F6B3B"
+                    ? "#2E8B57"
                     : "var(--border-strong)",
                 }}
                 transition={{ type: "spring", stiffness: 450, damping: 28 }}

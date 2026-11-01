@@ -1,123 +1,162 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* =========================================================================
      LIGHT THEME (Default)
-     Nigerian Kitchen Warmth:
-     Background #FFF4E4, Surface #FFFBF5, Pepper Red #D9381E,
-     Palm-Oil Orange #F28A1B, Forest Green #1F6B3B, Highlight #F5B83D, Text #2B1810
+     New Palette:
+     Brand Indigo #1D2B64, Background Cream #FFF5E1, Surface #FFFBF2,
+     Accent Saffron #F9A826, Highlight Zobo Red #A3173A, Success Green #2E8B57,
+     Text Ink #1A1033
      ========================================================================= */
-  --bg-page: #FFF4E4;
-  --bg-surface: #FFFBF5;
-  --bg-surface-subtle: #F9EFE2;
-  --bg-surface-hover: #F2E3D2;
+  --bg-page: #FFF5E1;
+  --bg-surface: #FFFBF2;
+  --bg-surface-subtle: #F6ECD4;
+  --bg-surface-hover: #EFE2C5;
   
-  --border-subtle: #EADBCA;
-  --border-default: #DCC8B3;
-  --border-strong: #BD9F85;
+  --border-subtle: #E8D8BA;
+  --border-default: #D6C29E;
+  --border-strong: #BAA178;
 
-  --text-primary: #2B1810;      /* Contrast on #FFF4E4: 15.56:1 (AAA) */
-  --text-secondary: #5C4134;    /* Contrast on #FFF4E4: 7.10:1 (AAA) */
-  --text-muted: #7B6052;        /* Contrast on #FFF4E4: 4.85:1 (AA) */
+  --text-primary: #1A1033;      /* Text Ink: Contrast on #FFF5E1 is 16.64:1 (AAA) */
+  --text-secondary: #453A61;    /* Deep Indigo Slate: Contrast 9.55:1 (AAA) */
+  --text-muted: #645882;        /* Muted Ink: Contrast 5.95:1 (AA) */
 
-  /* Specified Brand Tokens */
-  --color-primary: #D9381E;    /* Pepper red */
-  --color-primary-hover: #BC2C14;
-  --color-primary-subtle: #FDF0EE;
-  --color-primary-border: #F8C3BB;
-  --color-primary-contrast: #FFFFFF;
+  /* Brand Tokens */
+  --color-indigo: #1D2B64;      /* Brand Indigo */
+  --color-indigo-hover: #15204C;
+  --color-indigo-active: #0F1736;
+  --color-indigo-subtle: #EEF1FC;
+  --color-indigo-border: #C8D1F5;
+  --color-indigo-contrast: #FFFFFF; /* White on Brand Indigo: 13.28:1 (AAA) */
 
-  --color-secondary: #F28A1B;  /* Palm-oil orange */
-  --color-secondary-hover: #D77610;
-  --color-secondary-subtle: #FEF4E8;
-  --color-secondary-border: #FCD9B0;
-  --color-secondary-contrast: #2B1810; /* Dark text for WCAG AA compliance (6.79:1) */
+  --color-saffron: #F9A826;     /* Accent Saffron (for highlights, focus rings, progress) */
+  --color-saffron-hover: #E59518;
+  --color-saffron-subtle: #FEF6E9;
+  --color-saffron-border: #FCE1AD;
+  --color-saffron-contrast: #1A1033; /* ALWAYS dark text on saffron: 9.14:1 (AAA) */
 
-  --color-green: #1F6B3B;      /* Nigerian Forest Green */
-  --color-green-hover: #18552E;
-  --color-green-subtle: #EDF7F1;
-  --color-green-border: #BCE2CB;
-  --color-green-contrast: #FFFFFF; /* White on green: 6.51:1 (AA) */
+  --color-zobo: #A3173A;        /* Highlight Zobo Red (tiny accents only) */
+  --color-zobo-hover: #86102D;
+  --color-zobo-subtle: #FDF0F3;
+  --color-zobo-border: #F7C5D0;
+  --color-zobo-contrast: #FFFFFF; /* White on Zobo Red: 7.66:1 (AAA) */
 
-  --color-highlight: #F5B83D;  /* Warm golden harvest */
-  --color-highlight-subtle: #FEF8EC;
-  --color-highlight-border: #FDE8B5;
-  --color-highlight-contrast: #2B1810; /* Dark text for WCAG AA compliance (9.51:1) */
+  --color-green: #2E8B57;       /* Success Green */
+  --color-green-text: #20653E;  /* Deeper shade for green text on cream: 5.20:1 (AA) */
+  --color-green-hover: #246E44;
+  --color-green-subtle: #EAF5EE;
+  --color-green-border: #B7DFCA;
+  --color-green-contrast: #FFFFFF;
 
-  /* Legacy mappings mapped cleanly to new palette */
+  /* Semantic mappings */
+  --color-primary: var(--color-indigo);
+  --color-primary-hover: var(--color-indigo-hover);
+  --color-primary-subtle: var(--color-indigo-subtle);
+  --color-primary-border: var(--color-indigo-border);
+  --color-primary-contrast: var(--color-indigo-contrast);
+
+  --color-secondary: var(--color-indigo);
+  --color-secondary-hover: var(--color-indigo-hover);
+  --color-secondary-subtle: var(--color-indigo-subtle);
+  --color-secondary-border: var(--color-indigo-border);
+  --color-secondary-contrast: var(--color-indigo-contrast);
+
+  --color-highlight: var(--color-saffron);
+  --color-highlight-subtle: var(--color-saffron-subtle);
+  --color-highlight-border: var(--color-saffron-border);
+  --color-highlight-contrast: var(--color-saffron-contrast);
+
   --primary: var(--color-primary);
   --primary-hover: var(--color-primary-hover);
   --primary-subtle: var(--color-primary-subtle);
   --primary-border: var(--color-primary-border);
-  --primary-text: var(--color-primary);
   --primary-contrast: var(--color-primary-contrast);
 
-  --accent: var(--color-secondary);
-  --accent-hover: var(--color-secondary-hover);
-  --accent-subtle: var(--color-secondary-subtle);
-  --accent-border: var(--color-secondary-border);
-  --accent-text: #964700;
-  --accent-contrast: var(--color-secondary-contrast);
+  --accent: var(--color-saffron);
+  --accent-hover: var(--color-saffron-hover);
+  --accent-subtle: var(--color-saffron-subtle);
+  --accent-border: var(--color-saffron-border);
+  --accent-contrast: var(--color-saffron-contrast);
 
-  --card-shadow: 0 4px 20px -2px rgba(43, 24, 16, 0.05), 0 2px 6px -1px rgba(43, 24, 16, 0.03);
-  --card-shadow-hover: 0 10px 28px -4px rgba(43, 24, 16, 0.09), 0 4px 10px -2px rgba(43, 24, 16, 0.04);
+  --card-shadow: 0 4px 20px -2px rgba(26, 16, 51, 0.05), 0 2px 6px -1px rgba(26, 16, 51, 0.03);
+  --card-shadow-hover: 0 10px 28px -4px rgba(26, 16, 51, 0.09), 0 4px 10px -2px rgba(26, 16, 51, 0.04);
 }
 
 .dark {
   /* =========================================================================
-     DARK THEME (Warm Charcoal #1E1511)
-     Comfortable evening Nigerian kitchen ambiance.
+     DARK THEME
+     Base Night Indigo #121A3F, Cream Text #FFF5E1, Saffron Accents #F9A826,
+     Surfaces slightly lighter than the base (#1A2454, #22306C, #2A3B84)
      ========================================================================= */
-  --bg-page: #1E1511;
-  --bg-surface: #281D18;
-  --bg-surface-subtle: #33261F;
-  --bg-surface-hover: #3E2F27;
+  --bg-page: #121A3F;
+  --bg-surface: #1A2454;
+  --bg-surface-subtle: #22306C;
+  --bg-surface-hover: #2A3B84;
 
-  --border-subtle: #3C2B22;
-  --border-default: #503A2E;
-  --border-strong: #6B4E3E;
+  --border-subtle: #283777;
+  --border-default: #394C9A;
+  --border-strong: #516ABF;
 
-  --text-primary: #FBF5EE;      /* Contrast on #1E1511: 16.57:1 (AAA) */
-  --text-secondary: #D9C8BA;    /* Contrast on #1E1511: 9.20:1 (AAA) */
-  --text-muted: #A89586;        /* Contrast on #1E1511: 5.10:1 (AA) */
+  --text-primary: #FFF5E1;      /* Cream text on Night Indigo: 15.58:1 (AAA) */
+  --text-secondary: #CEC5B3;    /* Contrast 9.85:1 (AAA) */
+  --text-muted: #9E9484;        /* Contrast 5.64:1 (AA) */
 
-  --color-primary: #D9381E;
-  --color-primary-hover: #EA482E;
-  --color-primary-subtle: #381A15;
-  --color-primary-border: #63251A;
-  --color-primary-contrast: #FFFFFF;
+  --color-indigo: #2D3E8C;
+  --color-indigo-hover: #374BA5;
+  --color-indigo-active: #202D68;
+  --color-indigo-subtle: #1C2758;
+  --color-indigo-border: #3D52A8;
+  --color-indigo-contrast: #FFFFFF;
 
-  --color-secondary: #F28A1B;
-  --color-secondary-hover: #FA9A34;
-  --color-secondary-subtle: #3B230E;
-  --color-secondary-border: #6B3C11;
-  --color-secondary-contrast: #1E1511;
+  --color-saffron: #F9A826;
+  --color-saffron-hover: #FBAF3E;
+  --color-saffron-subtle: #362810;
+  --color-saffron-border: #6B4D16;
+  --color-saffron-contrast: #121A3F; /* Night Indigo on saffron: 8.56:1 (AAA) */
 
-  --color-green: #1F6B3B;
-  --color-green-hover: #268047;
-  --color-green-subtle: #14281C;
-  --color-green-border: #1E4D2F;
+  --color-zobo: #D12E57;
+  --color-zobo-hover: #E33C67;
+  --color-zobo-subtle: #3A101C;
+  --color-zobo-border: #661D32;
+  --color-zobo-contrast: #FFFFFF;
+
+  --color-green: #38A169;
+  --color-green-text: #68D391;
+  --color-green-hover: #48BB78;
+  --color-green-subtle: #132E22;
+  --color-green-border: #1E5038;
   --color-green-contrast: #FFFFFF;
 
-  --color-highlight: #F5B83D;
-  --color-highlight-subtle: #3A2E14;
-  --color-highlight-border: #6B5218;
-  --color-highlight-contrast: #1E1511;
+  --color-primary: var(--color-indigo);
+  --color-primary-hover: var(--color-indigo-hover);
+  --color-primary-subtle: var(--color-indigo-subtle);
+  --color-primary-border: var(--color-indigo-border);
+  --color-primary-contrast: var(--color-indigo-contrast);
 
-  /* Legacy mappings */
+  --color-secondary: var(--color-indigo);
+  --color-secondary-hover: var(--color-indigo-hover);
+  --color-secondary-subtle: var(--color-indigo-subtle);
+  --color-secondary-border: var(--color-indigo-border);
+  --color-secondary-contrast: var(--color-indigo-contrast);
+
+  --color-highlight: var(--color-saffron);
+  --color-highlight-subtle: var(--color-saffron-subtle);
+  --color-highlight-border: var(--color-saffron-border);
+  --color-highlight-contrast: var(--color-saffron-contrast);
+
   --primary: var(--color-primary);
   --primary-hover: var(--color-primary-hover);
   --primary-subtle: var(--color-primary-subtle);
   --primary-border: var(--color-primary-border);
-  --primary-text: #FCA5A5;
   --primary-contrast: var(--color-primary-contrast);
 
-  --accent: var(--color-secondary);
-  --accent-hover: var(--color-secondary-hover);
-  --accent-subtle: var(--color-secondary-subtle);
-  --accent-border: var(--color-secondary-border);
-  --accent-text: #FDBA74;
-  --accent-contrast: var(--color-secondary-contrast);
+  --accent: var(--color-saffron);
+  --accent-hover: var(--color-saffron-hover);
+  --accent-subtle: var(--color-saffron-subtle);
+  --accent-border: var(--color-saffron-border);
+  --accent-contrast: var(--color-saffron-contrast);
 
   --card-shadow: 0 4px 22px -2px rgba(0, 0, 0, 0.45), 0 2px 8px -1px rgba(0, 0, 0, 0.28);
   --card-shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.65), 0 4px 12px -2px rgba(0, 0, 0, 0.38);
@@ -137,6 +176,11 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
 
+  --color-indigo: var(--color-indigo);
+  --color-saffron: var(--color-saffron);
+  --color-zobo: var(--color-zobo);
+  --color-green: var(--color-green);
+
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
   --color-primary-subtle: var(--color-primary-subtle);
@@ -148,12 +192,6 @@
   --color-secondary-subtle: var(--color-secondary-subtle);
   --color-secondary-border: var(--color-secondary-border);
   --color-secondary-contrast: var(--color-secondary-contrast);
-
-  --color-green: var(--color-green);
-  --color-green-hover: var(--color-green-hover);
-  --color-green-subtle: var(--color-green-subtle);
-  --color-green-border: var(--color-green-border);
-  --color-green-contrast: var(--color-green-contrast);
 
   --color-highlight: var(--color-highlight);
   --color-highlight-subtle: var(--color-highlight-subtle);
@@ -168,7 +206,7 @@
 /* =========================================================================
    BASE STYLES & TYPOGRAPHY
    - 16px minimum body font size (WCAG AA requirement)
-   - Fraunces only for headings
+   - Fraunces for headings
    - Plus Jakarta Sans for body
    ========================================================================= */
 html {
@@ -179,7 +217,7 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  font-size: 1rem; /* 16px minimum */
+  font-size: 1rem;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -197,7 +235,7 @@ h1, h2, h3, h4, .font-heading {
 .chop-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 1.25rem; /* 20px - generous rounding */
+  border-radius: 1.25rem;
   box-shadow: var(--card-shadow);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -218,52 +256,72 @@ h1, h2, h3, h4, .font-heading {
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  font-size: 0.875rem; /* 14px minimum */
+  font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.25rem;
   padding: 0.375rem 0.875rem;
-  min-height: 44px; /* Touch target */
+  min-height: 44px;
   transition: all 0.15s ease;
 }
 
 .chop-pill-primary {
-  background-color: var(--color-primary-subtle);
-  color: #2B1810; /* Dark text for WCAG AA compliance - no red text under 18px on cream or pink */
-  border: 1px solid var(--color-primary-border);
+  background-color: var(--color-indigo-subtle);
+  color: var(--color-indigo);
+  border: 1px solid var(--color-indigo-border);
 }
 
 .dark .chop-pill-primary {
-  color: #FBF5EE;
+  background-color: var(--color-indigo-subtle);
+  color: #C8D1F5;
+  border: 1px solid var(--color-indigo-border);
 }
 
 .chop-pill-accent {
-  background-color: var(--color-secondary-subtle);
-  color: #2B1810; /* Dark text for WCAG AA (6.79:1) */
-  border: 1px solid var(--color-secondary-border);
+  background-color: var(--color-saffron-subtle);
+  color: #1A1033; /* Dark text ink for WCAG AA compliance (9.14:1) */
+  border: 1px solid var(--color-saffron-border);
 }
 
 .dark .chop-pill-accent {
-  color: #FBF5EE;
+  background-color: var(--color-saffron-subtle);
+  color: #FFF5E1;
+  border: 1px solid var(--color-saffron-border);
 }
 
 .chop-pill-green {
   background-color: var(--color-green-subtle);
-  color: #1F6B3B;
+  color: var(--color-green-text);
   border: 1px solid var(--color-green-border);
 }
 
 .dark .chop-pill-green {
+  background-color: var(--color-green-subtle);
   color: #86EFAC;
+  border: 1px solid var(--color-green-border);
+}
+
+.chop-pill-zobo {
+  background-color: var(--color-zobo-subtle);
+  color: var(--color-zobo);
+  border: 1px solid var(--color-zobo-border);
+}
+
+.dark .chop-pill-zobo {
+  background-color: var(--color-zobo-subtle);
+  color: #F7A6B8;
+  border: 1px solid var(--color-zobo-border);
 }
 
 .chop-pill-highlight {
-  background-color: var(--color-highlight-subtle);
-  color: #2B1810;
-  border: 1px solid var(--color-highlight-border);
+  background-color: var(--color-saffron-subtle);
+  color: #1A1033; /* Always dark text ink */
+  border: 1px solid var(--color-saffron-border);
 }
 
 .dark .chop-pill-highlight {
-  color: #FDE047;
+  background-color: var(--color-saffron-subtle);
+  color: #FFF5E1;
+  border: 1px solid var(--color-saffron-border);
 }
 
 .chop-pill-neutral {
