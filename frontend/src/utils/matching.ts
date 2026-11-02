@@ -281,3 +281,116 @@ export function getIngredientPrice(
 
   return null;
 }
+
+/**
+ * Known assumed kitchen staples.
+ * Per project rule, assumed staples (salt, water, cooking oil, seasoning cubes)
+ * are excluded from the cost-to-buy total and from missing shopping lists.
+ */
+export const ASSUMED_STAPLES_SET = new Set([
+  "salt",
+  "water",
+  "cooking oil",
+  "vegetable oil",
+  "pure vegetable oil",
+  "oil",
+  "seasoning cubes",
+  "seasoning cube",
+  "seasoning",
+  "maggi",
+  "maggi cubes",
+  "knorr",
+  "knorr cubes",
+  "bouillon",
+  "bouillon cubes",
+]);
+
+export function isAssumedStaple(raw: string): boolean {
+  if (!raw) return false;
+  const clean = raw.toLowerCase().replace(/[^a-z0-9 ]/g, " ").trim().replace(/\s+/g, " ");
+  if (ASSUMED_STAPLES_SET.has(clean)) return true;
+  for (const staple of ASSUMED_STAPLES_SET) {
+    if (clean === staple || clean.startsWith(staple + " ") || clean.endsWith(" " + staple)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export interface RecipeBudgetAnalysis {
+  costToBuy: number;
+  pricedCount: number;
+  unpricedCount: number;
+  totalMissingCount: number;
+  somePricesUnavailable: boolean;
+  noPricesAvailable: boolean;
+  fitsBudget: boolean | null;
+  overage: number;
+  missingItemsToBuy: string[];
+}
+
+/**
+ * Calculates the estimated cost of missing ingredients to buy for a given recipe in the selected city.
+ * 
+ * NOTE ON PRICES AND QUANTITY SCALING:
+ * Each price in prices.json represents standard Nigerian retail market purchasing units:
+ * - Vegetables/Greens: per bunch/wrap (e.g. Fresh Ugwu Leaves)
+ * - Peppers & Onions: per small market heap/tie (e.g. Scotch Bonnet, Tatashe, Red Onions)
+ * - Proteins & Fish: per piece or market portion (e.g. Smoked Titus, Okporoko portion, 6-pack Fresh Eggs)
+ * - Tubers: per medium tuber (e.g. Yam)
+ * - Grains & Legumes: per derica/cup (e.g. Honey Beans, White Rice, Garri)
+ * - Oils: per 50cl bottle/sachet (e.g. Pure Red Palm Oil, Pure Vegetable Oil)
+ * - Condiments: per tin, leaf wrap, or sachet (e.g. Crayfish, Iru, Spices)
+ * 
+ * The price table contains flat retail unit prices and does NOT provide granular gram/unit metadata.
+ * Consequently, linear scaling by the number of household servings is not possible without arbitrary
+ * distortion of market unit costs. As requested, costs are left unscaled and strictly marked "(estimate)".
+ * 
+ * Per project specification:
+ * - Assumed staples (salt, water, cooking oil, seasoning cubes) are excluded from cost-to-buy.
+ * - Missing ingredients without a price are excluded from cost-to-buy and marked with "some prices unavailable".
+ * - If no missing ingredients exist, costToBuy is 0 and fitsBudget is true.
+ * - If missing ingredients exist but none have prices, noPricesAvailable is true (card budget line is hidden).
+ */
+export function calculateRecipeCostToBuy(
+  recipe: MinimalRecipe,
+  city: string,
+  pricesData: Record<string, unknown>,
+  budgetNaira: number | null
+): RecipeBudgetAnalysis {
+  const missing = recipe.missing_ingredients_needed || [];
+  const nonStapleMissing = missing.filter((item) => !isAssumedStaple(item));
+
+  let costToBuy = 0;
+  let pricedCount = 0;
+  let unpricedCount = 0;
+
+  for (const item of nonStapleMissing) {
+    const price = getIngredientPrice(item, city, pricesData);
+    if (price !== null && price > 0) {
+      costToBuy += price;
+      pricedCount++;
+    } else {
+      unpricedCount++;
+    }
+  }
+
+  const somePricesUnavailable = unpricedCount > 0 && pricedCount > 0;
+  const noPricesAvailable = nonStapleMissing.length > 0 && pricedCount === 0;
+
+  const validBudget = typeof budgetNaira === "number" && budgetNaira > 0 ? budgetNaira : null;
+  const fitsBudget = validBudget !== null ? costToBuy <= validBudget : null;
+  const overage = validBudget !== null && costToBuy > validBudget ? costToBuy - validBudget : 0;
+
+  return {
+    costToBuy,
+    pricedCount,
+    unpricedCount,
+    totalMissingCount: nonStapleMissing.length,
+    somePricesUnavailable,
+    noPricesAvailable,
+    fitsBudget,
+    overage,
+    missingItemsToBuy: nonStapleMissing,
+  };
+}

@@ -13,6 +13,7 @@ export interface DetectedItem {
   form?: "raw" | "cooked" | "packaged" | "unknown";
   container_state?: "full" | "partial" | "nearly_empty" | "residue_only" | "unknown";
   estimated_quantity?: string;
+  source?: "photo" | "voice" | "manual";
 }
 
 export interface Recipe {

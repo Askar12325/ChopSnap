@@ -4,7 +4,7 @@ import hashlib
 import json
 import logging
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import httpx
 from ..config import settings
 from ..models.schemas import DetectedItem, Recipe, ShoppingItem
@@ -631,6 +631,9 @@ class RecipeService:
         spice_level: str = "Mild",
         cooking_fuel: str = "gas",
         recipe_count: int = 3,
+        budget_naira: Optional[int] = None,
+        servings: int = 2,
+        city: str = "Abuja",
     ) -> Tuple[List[Recipe], List[ShoppingItem], str, bool]:
         """
         Synthesizes Nigerian recipes and returns (recipes, shopping_list, provider_used, is_mock).
@@ -645,7 +648,7 @@ class RecipeService:
 
         # Check in-memory recipe cache for repeated queries
         cache_key = hashlib.sha256(
-            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}".encode()
+            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}_{budget_naira}_{servings}_{city}".encode()
         ).hexdigest()
         if cache_key in _RECIPE_CACHE:
             cached_recipes, cached_shopping, cached_mode = _RECIPE_CACHE[cache_key]
@@ -679,10 +682,14 @@ class RecipeService:
         # Attempt live inference with Muse Spark Open
         try:
             if settings.MUSE_GLIMMER_PROVIDER == "ollama":
-                raw_recipes, shopping = await self._call_ollama_chat(item_summary, spice_level, cooking_fuel, recipe_count)
+                raw_recipes, shopping = await self._call_ollama_chat(
+                    item_summary, spice_level, cooking_fuel, recipe_count, budget_naira, servings, city
+                )
                 mode_str = f"live_ollama_{settings.MUSE_GLIMMER_MODEL_NAME}"
             else:
-                raw_recipes, shopping = await self._call_openai_compatible(item_summary, spice_level, cooking_fuel, recipe_count)
+                raw_recipes, shopping = await self._call_openai_compatible(
+                    item_summary, spice_level, cooking_fuel, recipe_count, budget_naira, servings, city
+                )
                 mode_str = f"live_openai_{settings.MUSE_GLIMMER_MODEL_NAME}"
 
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
@@ -705,12 +712,30 @@ class RecipeService:
         spice_level: str = "Mild",
         cooking_fuel: str = "gas",
         recipe_count: int = 3,
+        budget_naira: Optional[int] = None,
+        servings: int = 2,
+        city: str = "Abuja",
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:
         """Calls vLLM, LMDeploy, or Ollama /v1 OpenAI-compatible endpoint with capped tokens."""
+        if budget_naira and budget_naira > 0:
+            budget_clause = (
+                f"The household has about N{budget_naira:,} for {servings} people. "
+                f"Design meals so that the cost of any ingredients the user must still buy stays within this budget, "
+                f"preferring what the user already has. If the budget is very low, prefer simple low-cost dishes. "
+                f"Never claim a recipe fits the budget; the app calculates that."
+            )
+        else:
+            budget_clause = (
+                f"The household has {servings} people in {city}. "
+                f"Design meals preferring what the user already has and keeping extra ingredients to buy minimal. "
+                f"Never claim a recipe fits the budget; the app calculates that."
+            )
+
         user_message = (
             f"Here are the provisions currently available in the kitchen:\n"
             + "\n".join(item_summary)
-            + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}.\n"
+            + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}, Market City = {city}.\n"
+            + f"{budget_clause}\n"
             + f"Please formulate {recipe_count} authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
             + f"including Quick Meals (<=20m) and Proper Cooking dishes, plus a minimal shopping list. "
             + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
@@ -748,12 +773,30 @@ class RecipeService:
         spice_level: str = "Mild",
         cooking_fuel: str = "gas",
         recipe_count: int = 3,
+        budget_naira: Optional[int] = None,
+        servings: int = 2,
+        city: str = "Abuja",
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:
         """Calls native Ollama chat API."""
+        if budget_naira and budget_naira > 0:
+            budget_clause = (
+                f"The household has about N{budget_naira:,} for {servings} people. "
+                f"Design meals so that the cost of any ingredients the user must still buy stays within this budget, "
+                f"preferring what the user already has. If the budget is very low, prefer simple low-cost dishes. "
+                f"Never claim a recipe fits the budget; the app calculates that."
+            )
+        else:
+            budget_clause = (
+                f"The household has {servings} people in {city}. "
+                f"Design meals preferring what the user already has and keeping extra ingredients to buy minimal. "
+                f"Never claim a recipe fits the budget; the app calculates that."
+            )
+
         user_message = (
             f"Here are the provisions currently available in the kitchen:\n"
             + "\n".join(item_summary)
-            + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}.\n"
+            + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}, Market City = {city}.\n"
+            + f"{budget_clause}\n"
             + f"Please formulate {recipe_count} authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
             + f"including Quick Meals (<=20m) and Proper Cooking dishes, plus a minimal shopping list. "
             + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."

@@ -105,7 +105,10 @@ export function SnapScreen({
   error,
 }: SnapScreenProps) {
   const hasIngredients =
-    Boolean(selectedFile) || preAnalysisItems.length > 0 || typedIngredient.trim().length > 0;
+    Boolean(selectedFile) ||
+    preAnalysisItems.length > 0 ||
+    typedIngredient.trim().length > 0 ||
+    voiceTranscript.trim().length > 0;
 
   const handleContinueClick = () => {
     if (typedIngredient.trim().length > 0) {
@@ -115,7 +118,7 @@ export function SnapScreen({
   };
 
   return (
-    <section className="max-w-4xl mx-auto space-y-6 py-2 sm:py-4">
+    <section className="max-w-4xl mx-auto space-y-6 py-2 sm:py-4 pb-24 sm:pb-4">
       {/* Top Bar: Stepper & Navigation Header */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
         <button
@@ -206,7 +209,8 @@ export function SnapScreen({
           </div>
 
           {/* Voice Panel (5 Cols on desktop) */}
-          <div className="md:col-span-5 flex flex-col justify-between p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3 min-h-[170px]">
+          <div className="md:col-span-5 flex flex-col justify-between p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3">
+            {/* Header: Label + Styled Language Dropdown matching white card */}
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1">
                 <Volume2 className="w-3.5 h-3.5 text-[#F9A826]" />
@@ -215,7 +219,7 @@ export function SnapScreen({
               <select
                 value={voiceLang}
                 onChange={(e) => setVoiceLang(e.target.value)}
-                className="text-xs bg-[var(--bg-page)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 focus:outline-none"
+                className="text-xs bg-white dark:bg-[#1E2B60] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-lg px-2.5 py-1 font-medium shadow-xs focus:outline-none focus:ring-1 focus:ring-[#F9A826]"
                 aria-label="Select voice recognition language"
               >
                 <option value="en-NG">English (NG)</option>
@@ -226,33 +230,52 @@ export function SnapScreen({
               </select>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={startVoiceRecognition}
-                className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm ${
-                  isListening
-                    ? "bg-[#A3173A] text-white animate-pulse"
-                    : "bg-[#1D2B64] hover:bg-[#15204C] text-white dark:bg-[#F9A826] dark:hover:bg-[#E5981E] dark:text-[#1A1033]"
-                }`}
-                aria-label={isListening ? "Stop listening" : "Start voice recognition"}
-              >
-                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </button>
+            {/* Centered Large Mic Button with Pulsing Ring while listening */}
+            <div className="flex flex-col items-center justify-center text-center py-1">
+              <div className="relative flex items-center justify-center">
+                {isListening && (
+                  <span className="absolute -inset-1.5 rounded-full border-2 border-[#A3173A] animate-ping opacity-60 pointer-events-none" />
+                )}
+                <button
+                  type="button"
+                  onClick={startVoiceRecognition}
+                  className={`w-16 h-16 sm:w-18 sm:h-18 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md active:scale-95 ${
+                    isListening
+                      ? "bg-[#A3173A] text-white ring-4 ring-[#A3173A]/30 animate-pulse"
+                      : "bg-[#1D2B64] hover:bg-[#15204C] text-white dark:bg-[#F9A826] dark:hover:bg-[#E5981E] dark:text-[#1A1033]"
+                  }`}
+                  aria-label={isListening ? "Stop listening" : "Start voice recognition"}
+                >
+                  {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                </button>
+              </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  {isListening ? `Listening (${recordingSeconds}s)...` : "Tap mic to speak"}
-                </p>
-                <p className="text-xs text-[var(--text-muted)] truncate">
-                  e.g. &ldquo;Cook for 4 people, mild spice&rdquo;
-                </p>
+              <p className="text-xs font-semibold text-[var(--text-primary)] mt-2">
+                {isListening ? `Listening (${recordingSeconds}s)...` : "Tap mic to speak"}
+              </p>
+
+              {/* Two Tappable Example Chips */}
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setVoiceTranscript("I have ugwu, stockfish and onions")}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-[#1E2B60] hover:bg-[#FAF9F5] dark:hover:bg-[#253678] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors shadow-2xs"
+                >
+                  &ldquo;I have ugwu, stockfish and onions&rdquo;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVoiceTranscript("₦3,000 for 4 people, no pork")}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-[#1E2B60] hover:bg-[#FAF9F5] dark:hover:bg-[#253678] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors shadow-2xs"
+                >
+                  &ldquo;₦3,000 for 4 people, no pork&rdquo;
+                </button>
               </div>
             </div>
 
             {/* Editable transcript if voice transcript exists or in fallback typing */}
             {(voiceTranscript || !voiceSupported) && (
-              <div className="space-y-2 pt-1 border-t border-[var(--border-subtle)]">
+              <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
                 <textarea
                   value={voiceTranscript}
                   onChange={(e) => setVoiceTranscript(e.target.value)}
@@ -265,7 +288,7 @@ export function SnapScreen({
                     type="button"
                     onClick={() => handleInterpretVoice()}
                     disabled={voiceInterpreting || !voiceTranscript.trim()}
-                    className="flex-1 py-1 px-2.5 rounded-lg text-xs font-semibold bg-[#1D2B64] hover:bg-[#15204C] text-white dark:bg-[#F9A826] dark:text-[#1A1033] transition-colors disabled:opacity-50 cursor-pointer"
+                    className="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-[#1D2B64] hover:bg-[#15204C] text-white dark:bg-[#F9A826] dark:text-[#1A1033] transition-colors disabled:opacity-50 cursor-pointer min-h-[36px]"
                   >
                     {voiceInterpreting ? "Interpreting..." : "Apply"}
                   </button>
@@ -273,9 +296,9 @@ export function SnapScreen({
                     <button
                       type="button"
                       onClick={handleUndoVoice}
-                      className="py-1 px-2.5 rounded-lg text-xs font-semibold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] flex items-center gap-1 cursor-pointer"
+                      className="py-1.5 px-3 rounded-lg text-xs font-semibold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] flex items-center gap-1 cursor-pointer min-h-[36px]"
                     >
-                      <Undo2 className="w-3 h-3" />
+                      <Undo2 className="w-3.5 h-3.5" />
                       <span>Undo</span>
                     </button>
                   )}
@@ -452,10 +475,10 @@ export function SnapScreen({
                             : "bg-[var(--bg-page)] text-[var(--text-primary)] border border-[var(--border-subtle)]"
                         }`}
                       >
-                        {fuel === "gas" && "⚡ Gas"}
-                        {fuel === "charcoal" && "🔥 Charcoal"}
+                        {fuel === "gas" && "🔥 Gas"}
+                        {fuel === "charcoal" && "🪵 Charcoal"}
                         {fuel === "electric" && "🔌 Electric"}
-                        {fuel === "kerosene" && "⏱️ Kerosene"}
+                        {fuel === "kerosene" && "💧 Kerosene"}
                       </button>
                     ))}
                   </div>
@@ -524,6 +547,24 @@ export function SnapScreen({
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-[var(--bg-page)]/95 backdrop-blur-md border-t border-[var(--border-subtle)] z-30 shadow-lg flex items-center justify-between gap-3">
+        <div className="text-xs text-[var(--text-secondary)] truncate">
+          {hasIngredients ? "Ready to review" : "Add photo or items"}
+        </div>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleContinueClick}
+          disabled={loading || !hasIngredients}
+          isLoading={loading}
+          className="min-h-[44px] px-6 shrink-0 shadow-md cursor-pointer"
+          iconRight={!loading ? <ArrowRight className="w-4 h-4 ml-1" /> : undefined}
+        >
+          {loading ? (statusStep || "Processing...") : "Continue"}
+        </Button>
       </div>
     </section>
   );

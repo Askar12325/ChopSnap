@@ -303,6 +303,9 @@ async def update_recipes(
             spice_level=payload.spice_level,
             cooking_fuel=payload.cooking_fuel,
             recipe_count=count,
+            budget_naira=payload.budget_naira,
+            servings=payload.servings or 2,
+            city=payload.city or "Abuja",
         )
 
         badge = "Demo Mode • Updated Recipes" if (payload.is_demo or is_recipe_mock) else None
@@ -353,6 +356,9 @@ async def expand_recipes(
             spice_level=payload.spice_level,
             cooking_fuel=payload.cooking_fuel,
             recipe_count=count,
+            budget_naira=payload.budget_naira,
+            servings=payload.servings or 2,
+            city=payload.city or "Abuja",
         )
 
         return ProcessResponse(

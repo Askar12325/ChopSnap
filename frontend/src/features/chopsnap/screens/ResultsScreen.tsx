@@ -22,7 +22,10 @@ import {
   Zap,
   Coins,
   Clock,
+  AlertCircle,
 } from "lucide-react";
+import cityPricesData from "@/data/prices.json";
+import { calculateRecipeCostToBuy, isAssumedStaple } from "@/utils/matching";
 import { ProgressDots } from "@/components/ui";
 import { RecipeHeroImage } from "../components/RecipeHeroImage";
 import {
@@ -73,6 +76,7 @@ export interface ResultsScreenProps {
   toggleShoppingItem: (idx: number) => void;
   copiedShoppingList: boolean;
   handleCopyShoppingList: () => void;
+  budgetNaira?: number | null;
 }
 
 export function ResultsScreen({
@@ -115,6 +119,7 @@ export function ResultsScreen({
   toggleShoppingItem,
   copiedShoppingList,
   handleCopyShoppingList,
+  budgetNaira,
 }: ResultsScreenProps) {
   if (!data || loading) return null;
 
@@ -628,6 +633,12 @@ export function ResultsScreen({
                       const completedCount = completedSteps[idx]?.size || 0;
                       const totalSteps = recipe.instructions.length;
                       const isBudget = recipe.financial_tier === "budget";
+                      const costAnalysis = calculateRecipeCostToBuy(
+                        recipe,
+                        selectedCity,
+                        cityPricesData,
+                        budgetNaira ?? null
+                      );
 
                       return (
                         <article
@@ -700,6 +711,56 @@ export function ResultsScreen({
                             <h3 className="text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight leading-snug">
                               {recipe.title}
                             </h3>
+
+                            {/* Budget & Cost-to-Buy Line */}
+                            {!costAnalysis.noPricesAvailable && (
+                              <div className="pt-0.5">
+                                {budgetNaira && budgetNaira > 0 ? (
+                                  costAnalysis.fitsBudget ? (
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#2E8B57] dark:text-[#86EFAC]">
+                                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                      <span>
+                                        Fits your budget
+                                        {costAnalysis.costToBuy > 0
+                                          ? ` (~₦${costAnalysis.costToBuy.toLocaleString()} to buy, estimate)`
+                                          : " (₦0 to buy, estimate)"}
+                                      </span>
+                                      {costAnalysis.somePricesUnavailable && (
+                                        <span className="text-[var(--text-muted)] font-normal text-xs">
+                                          • some prices unavailable
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-amber-600 dark:text-amber-400">
+                                      <AlertCircle className="w-4 h-4 shrink-0" />
+                                      <span>
+                                        About ₦{costAnalysis.overage.toLocaleString()} over your budget (estimate)
+                                      </span>
+                                      {costAnalysis.somePricesUnavailable && (
+                                        <span className="text-[var(--text-muted)] font-normal text-xs">
+                                          • some prices unavailable
+                                        </span>
+                                      )}
+                                    </div>
+                                  )
+                                ) : (
+                                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[var(--text-secondary)]">
+                                    <Wallet className="w-4 h-4 shrink-0 text-[#1D2B64] dark:text-[#C8D1F5]" />
+                                    <span>
+                                      {costAnalysis.costToBuy > 0
+                                        ? `~₦${costAnalysis.costToBuy.toLocaleString()} to buy (estimate)`
+                                        : "Everything in your kitchen (₦0 to buy, estimate)"}
+                                    </span>
+                                    {costAnalysis.somePricesUnavailable && (
+                                      <span className="text-[var(--text-muted)] font-normal text-xs">
+                                        • some prices unavailable
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Meta Specs Bar */}
@@ -788,8 +849,8 @@ export function ResultsScreen({
                                 Extra Items Needed:
                               </p>
                               <ul className="text-sm text-[var(--text-secondary)] space-y-2 font-sans">
-                                {recipe.missing_ingredients_needed.length > 0 ? (
-                                  recipe.missing_ingredients_needed.map((item, i) => (
+                                {costAnalysis.missingItemsToBuy.length > 0 ? (
+                                  costAnalysis.missingItemsToBuy.map((item, i) => (
                                     <li key={i} className="flex items-start gap-2">
                                       <span className="w-2 h-2 rounded-full bg-[#F9A826] mt-1.5 shrink-0" />
                                       <span>{item}</span>
@@ -962,7 +1023,9 @@ export function ResultsScreen({
                   </div>
 
                   <div className="space-y-3">
-                    {data.shopping_list.map((item, idx) => {
+                    {data.shopping_list
+                      .filter((item) => !isAssumedStaple(item.item))
+                      .map((item, idx) => {
                       const isChecked = checkedShoppingItems.has(idx);
 
                       return (

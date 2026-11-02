@@ -14,6 +14,7 @@ import { OpenWeightModal } from "../features/chopsnap/components/OpenWeightModal
 import { WelcomeScreen } from "../features/chopsnap/screens/WelcomeScreen";
 import { SnapScreen } from "../features/chopsnap/screens/SnapScreen";
 import { ReviewScreen } from "../features/chopsnap/screens/ReviewScreen";
+import { PlanScreen } from "../features/chopsnap/screens/PlanScreen";
 import { LoadingScreen } from "../features/chopsnap/screens/LoadingScreen";
 import { ResultsScreen } from "../features/chopsnap/screens/ResultsScreen";
 
@@ -59,7 +60,7 @@ export default function Home() {
       />
 
       {/* 2. Main Content Container */}
-      <main className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 flex-1">
+      <main className="max-w-7xl mx-auto w-full px-3.5 sm:px-6 lg:px-8 py-3 sm:py-6 flex-1">
         <AnimatePresence mode="wait" initial={false}>
           {state.step === "welcome" && (
             <m.div
@@ -143,6 +144,7 @@ export default function Home() {
             >
               <ReviewScreen
                 onBack={state.goBack}
+                onGoToPlan={() => state.goTo("plan")}
                 isReviewStep={state.isReviewStep}
                 data={state.data}
                 loading={state.loading}
@@ -166,7 +168,63 @@ export default function Home() {
             </m.div>
           )}
 
-          {(state.step === "plan" || state.step === "cooking" || state.step === "results") && (
+          {state.step === "plan" && (
+            <m.div
+              key="plan"
+              variants={screenVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={screenTransition}
+              className="w-full"
+            >
+              <PlanScreen
+                onBack={() => state.goTo("check")}
+                onSubmit={state.handleConfirmAndCook}
+                loading={state.loading}
+                householdSize={state.householdSize}
+                setHouseholdSize={state.setHouseholdSize}
+                spiceLevel={state.spiceLevel}
+                setSpiceLevel={state.setSpiceLevel}
+                cookingFuel={state.cookingFuel}
+                setCookingFuel={state.setCookingFuel}
+                selectedCity={state.selectedCity}
+                setSelectedCity={state.setSelectedCity}
+                budgetNaira={state.budgetNaira}
+                handleSetBudget={state.handleSetBudget}
+                dietaryPreferences={state.dietaryPreferences}
+                toggleDietaryPreference={state.toggleDietaryPreference}
+                voiceAppliedChanges={state.voiceAppliedChanges}
+                previousVoiceState={state.previousVoiceState}
+                handleUndoVoice={state.handleUndoVoice}
+              />
+            </m.div>
+          )}
+
+          {state.step === "cooking" && (
+            <m.div
+              key="cooking"
+              variants={screenVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={screenTransition}
+              className="w-full"
+            >
+              <LoadingScreen
+                loading={state.loading}
+                pipelinePhase={state.pipelinePhase}
+                statusStep={state.statusStep}
+                progressStage={state.progressStage}
+                error={state.error}
+                onRetry={state.handleConfirmAndCook}
+                onBackToPlan={() => state.goTo("plan")}
+                onCancel={state.resetAll}
+              />
+            </m.div>
+          )}
+
+          {state.step === "results" && (
             <m.div
               key="results"
               variants={screenVariants}
@@ -176,15 +234,6 @@ export default function Home() {
               transition={screenTransition}
               className="w-full space-y-8"
             >
-              {/* Loading Screen */}
-              <LoadingScreen
-                loading={state.loading}
-                pipelinePhase={state.pipelinePhase}
-                statusStep={state.statusStep}
-                progressStage={state.progressStage}
-              />
-
-              {/* Results Screen */}
               <ResultsScreen
                 data={state.data}
                 loading={state.loading}
@@ -225,6 +274,7 @@ export default function Home() {
                 toggleShoppingItem={state.toggleShoppingItem}
                 copiedShoppingList={state.copiedShoppingList}
                 handleCopyShoppingList={state.handleCopyShoppingList}
+                budgetNaira={state.budgetNaira}
               />
             </m.div>
           )}

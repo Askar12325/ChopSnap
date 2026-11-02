@@ -320,6 +320,9 @@ class UpdateRecipesRequest(BaseModel):
     is_demo: bool = Field(default=False, description="Whether request is in demo mode")
     spice_level: Optional[str] = Field(default="Mild", description="Spice preference: Mild, Authentic Hot, Suya Extra")
     cooking_fuel: Optional[str] = Field(default="gas", description="Cooking fuel: gas, charcoal, electric, kerosene")
+    budget_naira: Optional[int] = Field(default=None, description="Optional household budget target in Naira")
+    servings: Optional[int] = Field(default=2, description="Number of household portions/servings")
+    city: Optional[str] = Field(default="Abuja", description="Selected market city for pricing")
 
 class VoiceInterpretRequest(BaseModel):
     transcript: str = Field(..., description="User voice transcript or spoken instruction")

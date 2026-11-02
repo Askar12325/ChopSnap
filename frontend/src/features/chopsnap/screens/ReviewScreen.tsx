@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Check, AlertCircle, Plus, Utensils, ChefHat, X, ArrowLeft } from "lucide-react";
+import { Check, AlertCircle, Plus, ArrowRight, ChefHat, X, ArrowLeft } from "lucide-react";
 import { Button, StepHeader, ProgressDots } from "@/components/ui";
 import { DetectedItem, ProcessResponse } from "../types";
 
@@ -26,6 +26,7 @@ export interface ReviewScreenProps {
   resetAll?: () => void;
   handleConfirmAndCook: () => Promise<void>;
   onBack?: () => void;
+  onGoToPlan?: () => void;
 }
 
 export function ReviewScreen({
@@ -46,6 +47,7 @@ export function ReviewScreen({
   handleAddReviewItem,
   handleConfirmAndCook,
   onBack,
+  onGoToPlan,
 }: ReviewScreenProps) {
   if (loading) return null;
 
@@ -76,12 +78,11 @@ export function ReviewScreen({
                   stepNumber={2}
                   stepTotal={3}
                   title="Confirm your kitchen ingredients"
-                  description="Muse Spark Open will formulate recipes using only confirmed items. Please check unsure items and tap one-tap choices to confirm."
+                  description="We'll only cook with what you confirm. Remove anything that's wrong and add what's missing."
                   className="mb-0"
                 />
 
                 <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
-                  <ProgressDots totalSteps={3} currentStep={2} labels={["Snap", "Check", "Plan"]} />
                   <span className="text-sm font-semibold px-3 py-1.5 rounded-full bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
                     {selectedReviewItemIds.size} of {reviewItems.length} selected
                   </span>
@@ -146,9 +147,21 @@ export function ReviewScreen({
                           <span className={isSelected ? "text-[var(--text-primary)]" : "text-[var(--text-muted)] line-through"}>
                             {item.name}
                           </span>
-                          {item.estimated_quantity && (
-                            <span className="text-sm px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal">
-                              {item.estimated_quantity}
+                          {item.estimated_quantity &&
+                            item.estimated_quantity !== "Added manually" &&
+                            item.estimated_quantity !== "Added via voice" && (
+                              <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal">
+                                {item.estimated_quantity}
+                              </span>
+                            )}
+                          {item.source === "photo" && (
+                            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)]">
+                              Photo
+                            </span>
+                          )}
+                          {item.source === "voice" && (
+                            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[#FEF6E9] dark:bg-[#2A1F0D] text-[#B36B00] dark:text-[#F9A826] border border-[#FCE1AD] dark:border-[#6B4D16]">
+                              Voice
                             </span>
                           )}
                           <button
@@ -170,24 +183,20 @@ export function ReviewScreen({
               </div>
 
               {/* Group 2: "Please check" (Unsure items, not preselected, one-tap choices) */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                    <AlertCircle className="w-3.5 h-3.5" />
+              {pleaseCheckItems.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                    </div>
+                    <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
+                      Please check ({pleaseCheckItems.length})
+                    </h4>
+                    <span className="text-sm text-[var(--text-secondary)] font-normal hidden sm:inline">
+                      • Unsure items (not preselected). Tap a one-tap choice to confirm.
+                    </span>
                   </div>
-                  <h4 className="text-sm sm:text-base font-semibold text-[var(--text-primary)]">
-                    Please check ({pleaseCheckItems.length})
-                  </h4>
-                  <span className="text-sm text-[var(--text-secondary)] font-normal hidden sm:inline">
-                    • Unsure items (not preselected). Tap a one-tap choice to confirm.
-                  </span>
-                </div>
 
-                {pleaseCheckItems.length === 0 ? (
-                  <p className="text-sm text-[var(--text-secondary)] italic p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-subtle)]">
-                    No ambiguous items detected. All visible ingredients looked clear!
-                  </p>
-                ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {pleaseCheckItems.map((item) => {
                       const isSelected = selectedReviewItemIds.has(item.id!);
@@ -219,9 +228,21 @@ export function ReviewScreen({
                               <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
                                 {item.name}
                               </span>
-                              {item.estimated_quantity && (
-                                <span className="text-sm px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal shrink-0">
-                                  {item.estimated_quantity}
+                              {item.estimated_quantity &&
+                                item.estimated_quantity !== "Added manually" &&
+                                item.estimated_quantity !== "Added via voice" && (
+                                  <span className="text-xs px-2 py-0.5 rounded-md bg-[var(--border-subtle)] text-[var(--text-secondary)] font-normal shrink-0">
+                                    {item.estimated_quantity}
+                                  </span>
+                                )}
+                              {item.source === "photo" && (
+                                <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[var(--bg-surface-subtle)] text-[var(--text-secondary)] border border-[var(--border-subtle)] shrink-0">
+                                  Photo
+                                </span>
+                              )}
+                              {item.source === "voice" && (
+                                <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-[#FEF6E9] dark:bg-[#2A1F0D] text-[#B36B00] dark:text-[#F9A826] border border-[#FCE1AD] dark:border-[#6B4D16] shrink-0">
+                                  Voice
                                 </span>
                               )}
                             </div>
@@ -260,8 +281,8 @@ export function ReviewScreen({
                       );
                     })}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Add Missing Item Row */}
               <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
@@ -335,9 +356,9 @@ export function ReviewScreen({
                   <Button
                     variant="primary"
                     size="lg"
-                    onClick={handleConfirmAndCook}
+                    onClick={onGoToPlan || handleConfirmAndCook}
                     disabled={loading || selectedReviewItemIds.size === 0}
-                    icon={<Utensils className="w-4 h-4 text-white" />}
+                    icon={<ArrowRight className="w-4 h-4 text-white" />}
                     className="min-h-[48px] px-8 cursor-pointer shadow-md"
                   >
                     Looks good

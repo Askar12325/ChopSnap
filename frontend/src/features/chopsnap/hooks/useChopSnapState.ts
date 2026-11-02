@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import cityPricesData from "@/data/prices.json";
 import {
   isIngredientUsedInRecipes,
   getIngredientPrice,
+  calculateRecipeCostToBuy,
 } from "@/utils/matching";
 import {
   FlowStep,
@@ -125,10 +126,23 @@ export function useChopSnapState() {
   const [spiceLevel, setSpiceLevel] = useState<"Mild" | "Authentic Hot" | "Suya Extra">("Mild");
   const [cookingFuel, setCookingFuel] = useState<"gas" | "charcoal" | "electric" | "kerosene">("gas");
   const [householdSize, setHouseholdSize] = useState<number>(2);
+  const [budgetNaira, setBudgetNaira] = useState<number | null>(null);
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [showPreferences, setShowPreferences] = useState(false);
   const [showOpenWeightModal, setShowOpenWeightModal] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<SupportedCity>("Lagos");
+  const [selectedCity, setSelectedCity] = useState<SupportedCity>("Abuja");
   const [showSavingsInfo, setShowSavingsInfo] = useState<boolean>(false);
+
+  const handleSetBudget = (amount: number | null) => {
+    const cleanAmount = typeof amount === "number" && !isNaN(amount) && amount > 0 ? amount : null;
+    setBudgetNaira(cleanAmount);
+  };
+
+  const toggleDietaryPreference = (pref: string) => {
+    setDietaryPreferences((prev) =>
+      prev.includes(pref) ? prev.filter((p) => p !== pref) : [...prev, pref]
+    );
+  };
 
   // Ingredient Review & Confirmation State
   const [isReviewStep, setIsReviewStep] = useState<boolean>(false);
@@ -401,14 +415,9 @@ export function useChopSnapState() {
       const changeSummaries: string[] = [];
 
       // 1. Budget
-      if (interp.budget_naira) {
-        if (interp.budget_naira <= 1500) {
-          setTierFilter("budget");
-          changeSummaries.push(`Budget ₦${interp.budget_naira.toLocaleString()} (Everyday Budget)`);
-        } else {
-          setTierFilter("comfortable");
-          changeSummaries.push(`Budget ₦${interp.budget_naira.toLocaleString()} (Comfortable)`);
-        }
+      if (interp.budget_naira && interp.budget_naira > 0) {
+        setBudgetNaira(interp.budget_naira);
+        changeSummaries.push(`Budget ₦${interp.budget_naira.toLocaleString()}`);
       }
 
       // 2. Servings
@@ -419,6 +428,7 @@ export function useChopSnapState() {
 
       // 3. Dietary
       if (interp.dietary && interp.dietary.length > 0) {
+        setDietaryPreferences(interp.dietary);
         changeSummaries.push(interp.dietary.join(", "));
       }
 
@@ -453,7 +463,7 @@ export function useChopSnapState() {
                 name: addName.trim(),
                 category: "Produce",
                 confidence: 1.0,
-                estimated_quantity: "Added via voice",
+                source: "voice",
               });
             }
           }
@@ -482,7 +492,7 @@ export function useChopSnapState() {
                 name: addName.trim(),
                 category: "Produce",
                 confidence: 1.0,
-                estimated_quantity: "Added via voice",
+                source: "voice",
               });
             }
           }
@@ -538,6 +548,8 @@ export function useChopSnapState() {
 
     setPreviousVoiceState(null);
     setVoiceAppliedChanges(null);
+    setBudgetNaira(null);
+    setDietaryPreferences([]);
     setVoiceMessage("Voice changes undone.");
   };
 
@@ -571,6 +583,7 @@ export function useChopSnapState() {
     const itemsWithIds: (DetectedItem & { id: string })[] = items.map((it, idx) => ({
       ...it,
       id: it.id || `item-${Date.now()}-${idx}-${it.name.replace(/[^a-zA-Z0-9]/g, "_")}`,
+      source: it.source || (it.estimated_quantity?.toLowerCase().includes("voice") ? "voice" : "photo"),
     }));
 
     setReviewItems(itemsWithIds);
@@ -647,6 +660,7 @@ export function useChopSnapState() {
       alternatives: [],
       form: "raw",
       container_state: "full",
+      source: "manual",
       estimated_quantity: reviewNewItemQty.trim() || undefined,
     };
     setReviewItems((prev) => [...prev, newItem]);
@@ -681,19 +695,20 @@ export function useChopSnapState() {
 
     setLoading(true);
     setError(null);
+    goTo("cooking");
     setPipelinePhase("recipes");
     setProgressStage(1);
-    setStatusStep("Confirmed ingredients verified…");
+    setStatusStep("Reading your ingredients...");
 
     const tStage2 = setTimeout(() => {
       setProgressStage(2);
-      setStatusStep("Muse Spark Open formulating authentic recipes…");
+      setStatusStep("Planning meals...");
     }, 400);
 
     const tStage3 = setTimeout(() => {
       setProgressStage(3);
-      setStatusStep("Calculating zero-waste pantry value locally…");
-    }, 3800);
+      setStatusStep("Pricing your meal...");
+    }, 1500);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -706,6 +721,9 @@ export function useChopSnapState() {
           is_demo: isDemoReview,
           spice_level: spiceLevel,
           cooking_fuel: cookingFuel,
+          budget_naira: budgetNaira,
+          servings: householdSize,
+          city: selectedCity,
         }),
       });
 
@@ -724,7 +742,7 @@ export function useChopSnapState() {
       setActiveTab("quick");
       setCompletedSteps({});
       setCheckedShoppingItems(new Set());
-      goTo("plan");
+      goTo("results");
       scrollToResults();
 
       // Non-blocking background fetch for 2 additional variation recipes
@@ -737,6 +755,9 @@ export function useChopSnapState() {
           is_demo: isDemoReview,
           spice_level: spiceLevel,
           cooking_fuel: cookingFuel,
+          budget_naira: budgetNaira,
+          servings: householdSize,
+          city: selectedCity,
         }),
       })
         .then((r) => (r.ok ? r.json() : null))
@@ -896,7 +917,7 @@ export function useChopSnapState() {
       name: targetName,
       category,
       confidence: 1.0,
-      estimated_quantity: "Added manually",
+      source: "manual",
     };
 
     if (data) {
@@ -1075,6 +1096,9 @@ export function useChopSnapState() {
           is_demo: data.is_demo ?? false,
           spice_level: spiceLevel,
           cooking_fuel: cookingFuel,
+          budget_naira: budgetNaira,
+          servings: householdSize,
+          city: selectedCity,
         }),
       });
 
@@ -1188,6 +1212,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     setSelectedReviewItemIds(new Set());
     setData(null);
     setError(null);
+    setBudgetNaira(null);
+    setDietaryPreferences([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1227,10 +1253,30 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
   const quickRecipes = data?.recipes.filter((r) => r.meal_type === "quick") || [];
   const properRecipes = data?.recipes.filter((r) => r.meal_type !== "quick") || [];
 
-  const displayedRecipes = (activeTab === "quick" ? quickRecipes : properRecipes).filter((r) => {
+  const rawTabRecipes = activeTab === "quick" ? quickRecipes : properRecipes;
+  const filteredRecipes = rawTabRecipes.filter((r) => {
     if (tierFilter === "all") return true;
     return r.financial_tier === tierFilter;
   });
+
+  const displayedRecipes = useMemo(() => {
+    if (!budgetNaira || budgetNaira <= 0) {
+      return filteredRecipes;
+    }
+
+    return [...filteredRecipes].sort((a, b) => {
+      const aAnalysis = calculateRecipeCostToBuy(a, selectedCity, cityPricesData, budgetNaira);
+      const bAnalysis = calculateRecipeCostToBuy(b, selectedCity, cityPricesData, budgetNaira);
+
+      const aFits = aAnalysis.fitsBudget === true ? 1 : 0;
+      const bFits = bAnalysis.fitsBudget === true ? 1 : 0;
+
+      if (aFits !== bFits) {
+        return bFits - aFits; // 1 (fits) before 0 (over)
+      }
+      return aAnalysis.costToBuy - bAnalysis.costToBuy;
+    });
+  }, [filteredRecipes, budgetNaira, selectedCity]);
 
   const activeDisplayedRecipes =
     activeTab === "quick"
@@ -1409,6 +1455,10 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     goTo,
     goNext,
     goBack,
+    budgetNaira,
+    handleSetBudget,
+    dietaryPreferences,
+    toggleDietaryPreference,
 
     // Derived values
     looksClearItems,
