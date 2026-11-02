@@ -27,9 +27,11 @@ export interface ReviewScreenProps {
   handleConfirmAndCook: () => Promise<void>;
   onBack?: () => void;
   onGoToPlan?: () => void;
+  onRetryLive?: () => void;
 }
 
 export function ReviewScreen({
+  data,
   loading,
   reviewRef,
   selectedReviewItemIds,
@@ -48,6 +50,7 @@ export function ReviewScreen({
   handleConfirmAndCook,
   onBack,
   onGoToPlan,
+  onRetryLive,
 }: ReviewScreenProps) {
   if (loading) return null;
 
@@ -70,6 +73,27 @@ export function ReviewScreen({
 
         <ProgressDots totalSteps={3} currentStep={2} labels={["Snap", "Check", "Plan"]} />
       </div>
+
+      {/* Flagged Fallback Notice Banner for Auto Mode */}
+      {data?.fallback_triggered && (
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="font-medium">
+              Using example data because live analysis failed
+            </span>
+          </div>
+          {onRetryLive && (
+            <button
+              type="button"
+              onClick={onRetryLive}
+              className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-[#1D2B64] hover:bg-[#15204C] text-white font-semibold text-xs shrink-0 cursor-pointer self-start sm:self-auto transition-all"
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      )}
 
       <div id="review-section" ref={reviewRef} className="chop-card p-5 sm:p-8 shadow-lg border-2 border-[var(--primary-border)] space-y-6">
               {/* Header */}

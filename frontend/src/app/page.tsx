@@ -93,6 +93,7 @@ export default function Home() {
               <SnapScreen
                 onBack={state.goBack}
                 onContinue={state.handleSubmit}
+                onTryExample={() => state.triggerDemo("market")}
                 fileInputRef={state.fileInputRef}
                 handleFileChange={state.handleFileChange}
                 handleDrop={state.handleDrop}
@@ -165,6 +166,7 @@ export default function Home() {
                 handleAddReviewItem={state.handleAddReviewItem}
                 resetAll={state.resetAll}
                 handleConfirmAndCook={state.handleConfirmAndCook}
+                onRetryLive={state.handleSubmit}
               />
             </m.div>
           )}
@@ -219,6 +221,7 @@ export default function Home() {
                 progressStage={state.progressStage}
                 error={state.error}
                 onRetry={state.handleConfirmAndCook}
+                onTryExample={() => state.triggerDemo("market")}
                 onBackToPlan={() => state.goTo("plan")}
                 onCancel={state.resetAll}
               />

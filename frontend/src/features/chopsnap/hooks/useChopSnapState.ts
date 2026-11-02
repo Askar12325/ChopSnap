@@ -18,6 +18,57 @@ import {
 } from "../types";
 import { CLIENT_DEMO_DATA } from "../data/samples";
 
+async function resizeImageClientSide(file: File, maxDim = 1024): Promise<Blob> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || !file.type.startsWith("image/")) {
+      resolve(file);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width <= maxDim && height <= maxDim) {
+        resolve(file);
+        return;
+      }
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          resolve(blob || file);
+        },
+        "image/jpeg",
+        0.85
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
+}
+
 export function useChopSnapState() {
   // =========================================================================
   // Guided Step Flow State (#snap, #check, #plan, #cooking, #results)
@@ -974,10 +1025,11 @@ export function useChopSnapState() {
     if (selectedFile) {
       setPipelinePhase("vision");
       setProgressStage(1);
-      setStatusStep("Optimizing photo resolution (768px)…");
+      setStatusStep("Optimizing photo resolution (1024px)…");
       try {
+        const resizedBlob = await resizeImageClientSide(selectedFile, 1024);
         const formData = new FormData();
-        formData.append("file", selectedFile);
+        formData.append("file", resizedBlob, selectedFile.name);
 
         const timer1 = setTimeout(() => {
           setProgressStage(2);
@@ -1007,6 +1059,7 @@ export function useChopSnapState() {
         }
 
         const result: ProcessResponse = await res.json();
+        setData(result);
         // If user already typed extra items before upload, merge them
         const merged = [...result.detected_items];
         if (preAnalysisItems.length > 0) {
@@ -1135,6 +1188,8 @@ export function useChopSnapState() {
       setData({
         ...data,
         recipes: updatedRecipes,
+        fallback_triggered: true,
+        fallback_reason: "Live recipe recalculation could not connect to server; displaying estimates.",
       });
       setCompletedSteps({});
       scrollToResults();

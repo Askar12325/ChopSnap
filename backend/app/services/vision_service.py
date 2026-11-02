@@ -106,8 +106,14 @@ class VisionService:
             logger.info(f"Demo mode active: Returning curated provisions for '{sample_type or 'market'}'.")
             return self._mock_detected_items_for_sample(sample_type or "market"), "demo_curated", True
 
-        # Check in-memory vision cache for repeated image analysis
-        img_hash = hashlib.sha256(image_bytes).hexdigest() if image_bytes else None
+        # Check in-memory vision cache for repeated image analysis (live successes only)
+        img_hash = (
+            hashlib.sha256(
+                f"{hashlib.sha256(image_bytes).hexdigest()}_{settings.VISION_MODEL_NAME}_low".encode()
+            ).hexdigest()
+            if image_bytes
+            else None
+        )
         if img_hash and img_hash in _VISION_CACHE:
             cached_items, cached_mode = _VISION_CACHE[img_hash]
             logger.info(f"Vision cache HIT for image hash {img_hash[:10]}: returning {len(cached_items)} items instantly.")
@@ -129,6 +135,7 @@ class VisionService:
                 items = await self._call_openai_compatible_vision(b64_image)
                 mode_str = f"live_openai_{settings.VISION_MODEL_NAME}"
 
+            # Only cache successful live results
             if img_hash:
                 _VISION_CACHE[img_hash] = (items, mode_str)
 
@@ -140,21 +147,22 @@ class VisionService:
             if settings.INFERENCE_MODE == "live":
                 raise RuntimeError(f"Live vision inference failed: {e}") from e
             
+            # In auto mode, fallback to mock but never cache fallback results
             return self._mock_detected_items(image_bytes), f"fallback_mock (vision error: {type(e).__name__})", True
 
     def _preprocess_image(self, image_bytes: bytes) -> Tuple[bytes, str]:
-        """Validates format, constrains max resolution (768px) for fast tokenization, and returns b64."""
+        """Validates format, constrains max resolution (1024px) for fast tokenization, and returns b64."""
         try:
             image = Image.open(io.BytesIO(image_bytes))
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGB")
             
-            max_dim = 768
+            max_dim = 1024
             if max(image.width, image.height) > max_dim:
                 image.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
                 
             buffer = io.BytesIO()
-            image.save(buffer, format="JPEG", quality=80)
+            image.save(buffer, format="JPEG", quality=85)
             processed_bytes = buffer.getvalue()
             b64_str = base64.b64encode(processed_bytes).decode("utf-8")
             return processed_bytes, b64_str
@@ -174,6 +182,7 @@ class VisionService:
             "stream": False,
             "options": {
                 "temperature": 0.2,
+                "num_predict": 3000,
             }
         }
 
@@ -185,7 +194,7 @@ class VisionService:
             return self._parse_items_json(raw_text)
 
     async def _call_openai_compatible_vision(self, b64_image: str) -> List[DetectedItem]:
-        """Calls an OpenAI-compatible vision endpoint (e.g. vLLM or local server)."""
+        """Calls an OpenAI-compatible vision endpoint with automatic single retry on truncation or parse error."""
         base_url = settings.VISION_ENDPOINT_OVERRIDE or f"{settings.OLLAMA_BASE_URL.rstrip('/')}/v1"
         url = f"{base_url.rstrip('/')}/chat/completions"
         logger.info(f"Dispatching vision inference to OpenAI-compatible endpoint at {url} (model: {settings.VISION_MODEL_NAME})")
@@ -206,19 +215,38 @@ class VisionService:
             ],
             "temperature": 0.2,
             "reasoning_effort": "low",
-            "max_completion_tokens": 1500,
+            "max_completion_tokens": 3000,
         }
 
         headers = {}
         if settings.MUSE_GLIMMER_API_KEY:
             headers["Authorization"] = f"Bearer {settings.MUSE_GLIMMER_API_KEY}"
 
-        async with httpx.AsyncClient(timeout=settings.VISION_TIMEOUT_SECONDS) as client:
-            res = await client.post(url, json=payload, headers=headers)
-            res.raise_for_status()
-            data = res.json()
-            raw_text = data["choices"][0]["message"].get("content") or ""
-            return self._parse_items_json(raw_text)
+        last_error = None
+        for attempt in range(2):
+            try:
+                async with httpx.AsyncClient(timeout=settings.VISION_TIMEOUT_SECONDS) as client:
+                    res = await client.post(url, json=payload, headers=headers)
+                    res.raise_for_status()
+                    data = res.json()
+                    choice = data["choices"][0]
+                    raw_text = choice["message"].get("content") or ""
+                    finish_reason = choice.get("finish_reason")
+
+                    if finish_reason == "length":
+                        logger.warning(f"Vision response truncated by length limit on attempt {attempt + 1}")
+                        if attempt == 0:
+                            payload["max_completion_tokens"] = 3500
+                            continue
+                        raise ValueError("Vision model response was cut off due to length limit.")
+
+                    return self._parse_items_json(raw_text)
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Vision inference attempt {attempt + 1} failed: {e}")
+                if attempt == 0:
+                    continue
+                raise last_error
 
     def _parse_items_json(self, raw_text: str) -> List[DetectedItem]:
         """Robust multi-layer JSON parser extracting structured items from model text."""

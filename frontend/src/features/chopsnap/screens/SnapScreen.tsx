@@ -26,6 +26,7 @@ import { NIGERIAN_SUGGESTIONS } from "../data/samples";
 export interface SnapScreenProps {
   onBack: () => void;
   onContinue: () => void;
+  onTryExample?: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDrop: (e: React.DragEvent) => void;
@@ -506,7 +507,7 @@ export function SnapScreen({
 
         {/* Error notification */}
         {error && (
-          <div className="p-3.5 rounded-xl bg-[#FDEEEC] dark:bg-[#2E1816] border border-[#F5C2BC] dark:border-[#5C2A25] text-[#1A1033] dark:text-[#FCA5A5] text-sm flex items-center justify-between gap-3 shadow-sm">
+          <div className="p-3.5 rounded-xl bg-[#FDEEEC] dark:bg-[#2E1816] border border-[#F5C2BC] dark:border-[#5C2A25] text-[#1A1033] dark:text-[#FCA5A5] text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-[#A3173A] shrink-0 mt-0.5" />
               <div>
@@ -514,14 +515,25 @@ export function SnapScreen({
                 <p className="text-xs leading-relaxed">{error}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleContinueClick}
-              className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#1D2B64] text-white font-semibold text-xs shrink-0 cursor-pointer flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3 h-3" />
-              <span>Retry</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleContinueClick}
+                className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#1D2B64] hover:bg-[#15204C] text-white font-semibold text-xs cursor-pointer flex items-center gap-1.5 transition-all"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Try again</span>
+              </button>
+              {onTryExample && (
+                <button
+                  type="button"
+                  onClick={onTryExample}
+                  className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-semibold text-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                >
+                  <span>Try an example</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 

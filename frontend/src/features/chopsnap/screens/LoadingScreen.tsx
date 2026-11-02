@@ -12,6 +12,7 @@ export interface LoadingScreenProps {
   progressStage: number;
   error?: string | null;
   onRetry?: () => void;
+  onTryExample?: () => void;
   onBackToPlan?: () => void;
   onCancel?: () => void;
 }
@@ -22,6 +23,7 @@ export function LoadingScreen({
   progressStage,
   error,
   onRetry,
+  onTryExample,
   onBackToPlan,
   onCancel,
 }: LoadingScreenProps) {
@@ -246,6 +248,17 @@ export function LoadingScreen({
                   className="w-full sm:w-auto min-h-[44px] px-6 cursor-pointer"
                 >
                   Try again
+                </Button>
+              )}
+
+              {onTryExample && (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={onTryExample}
+                  className="w-full sm:w-auto min-h-[44px] px-6 cursor-pointer"
+                >
+                  Try an example
                 </Button>
               )}
 

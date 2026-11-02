@@ -43,6 +43,8 @@ export interface ShoppingItem {
 export interface ProcessResponse {
   success: boolean;
   is_demo?: boolean;
+  fallback_triggered?: boolean;
+  fallback_reason?: string | null;
   demo_badge?: string;
   detected_items: DetectedItem[];
   recipes: Recipe[];

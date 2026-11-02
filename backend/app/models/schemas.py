@@ -279,6 +279,8 @@ class ShoppingItem(BaseModel):
 class ProcessResponse(BaseModel):
     success: bool = True
     is_demo: bool = Field(default=False, description="True if curated demo data or offline mock fallback was used")
+    fallback_triggered: bool = Field(default=False, description="True if live analysis failed and fallback data is being shown")
+    fallback_reason: Optional[str] = Field(default=None, description="Explanation when fallback is triggered")
     demo_badge: Optional[str] = Field(default=None, description="Descriptive badge when demo mode or curated data is active")
     detected_items: List[DetectedItem] = Field(default_factory=list)
     recipes: List[Recipe] = Field(default_factory=list)

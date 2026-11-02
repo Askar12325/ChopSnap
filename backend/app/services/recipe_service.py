@@ -646,9 +646,9 @@ class RecipeService:
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
             return adjusted_recipes, shopping, "demo_curated", True
 
-        # Check in-memory recipe cache for repeated queries
+        # Check in-memory recipe cache for repeated queries (live successes only)
         cache_key = hashlib.sha256(
-            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}_{budget_naira}_{servings}_{city}".encode()
+            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}_{budget_naira}_{servings}_{city}_{settings.MUSE_GLIMMER_MODEL_NAME}_low".encode()
         ).hexdigest()
         if cache_key in _RECIPE_CACHE:
             cached_recipes, cached_shopping, cached_mode = _RECIPE_CACHE[cache_key]
@@ -693,6 +693,7 @@ class RecipeService:
                 mode_str = f"live_openai_{settings.MUSE_GLIMMER_MODEL_NAME}"
 
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
+            # Only cache successful live results
             _RECIPE_CACHE[cache_key] = (adjusted_recipes, shopping, mode_str)
             return adjusted_recipes, shopping, mode_str, False
         except Exception as e:
@@ -702,6 +703,7 @@ class RecipeService:
             if settings.INFERENCE_MODE == "live":
                 raise RuntimeError(f"Live Muse Spark Open inference failed: {e}") from e
 
+            # In auto mode, fallback to mock but never cache fallback results
             raw_recipes, shopping = self._mock_recipes(detected_items)
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
             return adjusted_recipes, shopping, f"fallback_mock (muse error: {type(e).__name__})", True
@@ -716,7 +718,7 @@ class RecipeService:
         servings: int = 2,
         city: str = "Abuja",
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:
-        """Calls vLLM, LMDeploy, or Ollama /v1 OpenAI-compatible endpoint with capped tokens."""
+        """Calls vLLM, LMDeploy, or Ollama /v1 OpenAI-compatible endpoint with automatic single retry on truncation or parse error."""
         if budget_naira and budget_naira > 0:
             budget_clause = (
                 f"The household has about N{budget_naira:,} for {servings} people. "
@@ -753,19 +755,38 @@ class RecipeService:
             "temperature": 0.5,
             "response_format": {"type": "json_object"},
             "reasoning_effort": "low",
-            "max_completion_tokens": 2200,
+            "max_completion_tokens": 4000,
         }
 
         headers = {}
         if settings.MUSE_GLIMMER_API_KEY:
             headers["Authorization"] = f"Bearer {settings.MUSE_GLIMMER_API_KEY}"
 
-        async with httpx.AsyncClient(timeout=settings.MUSE_GLIMMER_TIMEOUT_SECONDS) as client:
-            res = await client.post(url, json=payload, headers=headers)
-            res.raise_for_status()
-            data = res.json()
-            raw_text = data["choices"][0]["message"].get("content") or ""
-            return self._parse_recipe_json(raw_text)
+        last_error = None
+        for attempt in range(2):
+            try:
+                async with httpx.AsyncClient(timeout=settings.MUSE_GLIMMER_TIMEOUT_SECONDS) as client:
+                    res = await client.post(url, json=payload, headers=headers)
+                    res.raise_for_status()
+                    data = res.json()
+                    choice = data["choices"][0]
+                    raw_text = choice["message"].get("content") or ""
+                    finish_reason = choice.get("finish_reason")
+
+                    if finish_reason == "length":
+                        logger.warning(f"Recipe response truncated by length limit on attempt {attempt + 1}")
+                        if attempt == 0:
+                            payload["max_completion_tokens"] = 4800
+                            continue
+                        raise ValueError("Recipe synthesis response was cut off due to length limit.")
+
+                    return self._parse_recipe_json(raw_text)
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Recipe synthesis attempt {attempt + 1} failed: {e}")
+                if attempt == 0:
+                    continue
+                raise last_error
 
     async def _call_ollama_chat(
         self,

@@ -158,19 +158,9 @@ async def process_fridge_image(
         )
 
     try:
-        # Detect demo mode from query param or filename pattern
-        is_demo_file = (
-            demo
-            or file.filename.startswith("provisions_")
-            or "sample" in file.filename.lower()
-            or "demo" in file.filename.lower()
-        )
-
-        resolved_sample_type = sample_type
-        if not resolved_sample_type and file.filename.startswith("provisions_"):
-            parts = file.filename.replace("provisions_", "").split(".")
-            if parts:
-                resolved_sample_type = parts[0]
+        # Explicit demo mode only from query parameter (no silent filename hijacking)
+        is_demo_file = bool(demo)
+        resolved_sample_type = sample_type if is_demo_file else None
 
         image_bytes = await file.read()
         if not image_bytes:
@@ -186,16 +176,16 @@ async def process_fridge_image(
             image_bytes, sample_type=resolved_sample_type, is_demo=is_demo_file
         )
 
-        is_overall_mock = is_demo_file or is_vision_mock
+        is_fallback = bool(is_vision_mock and not is_demo_file)
         badge = (
-            "Demo Mode • Curated Nigerian Provisions"
-            if is_overall_mock
-            else None
+            "Demo Mode • Example Nigerian Provisions"
+            if is_demo_file
+            else ("Example Data (Fallback)" if is_fallback else None)
         )
         combined_mode = (
             "curated_demo"
             if is_demo_file
-            else ("live" if not is_overall_mock else "auto (resilient fallback)")
+            else ("auto (fallback)" if is_fallback else "live")
         )
 
         if detect_only:
@@ -205,7 +195,9 @@ async def process_fridge_image(
             )
             return ProcessResponse(
                 success=True,
-                is_demo=is_overall_mock,
+                is_demo=is_demo_file,
+                fallback_triggered=is_fallback,
+                fallback_reason="Live vision analysis failed; displaying example provisions." if is_fallback else None,
                 demo_badge=badge,
                 detected_items=detected_items,
                 recipes=[],
@@ -214,13 +206,13 @@ async def process_fridge_image(
                     "vision_model": settings.VISION_MODEL_NAME,
                     "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
                     "inference_mode": combined_mode,
-                    "is_demo_mode": is_overall_mock,
+                    "is_demo_mode": is_demo_file,
                     "vision_engine": vision_mode,
                     "recipe_engine": "none (detect_only review)",
                 }
             )
 
-        # Step 2: Muse Spark Open culinary reasoning & maximization (3 recipes first for <10s response)
+        # Step 2: Muse Spark Open culinary reasoning & maximization (3 recipes first for fast response)
         recipes, shopping_list, recipe_mode, is_recipe_mock = await recipe_service.generate_recipes(
             detected_items,
             sample_type=resolved_sample_type,
@@ -230,28 +222,29 @@ async def process_fridge_image(
             recipe_count=3,
         )
 
-        # Determine overall mock/demo state
-        is_overall_mock = is_demo_file or is_vision_mock or is_recipe_mock
+        is_fallback = bool((is_vision_mock or is_recipe_mock) and not is_demo_file)
         badge = (
-            "Demo Mode • Curated Nigerian Provisions"
-            if is_overall_mock
-            else None
+            "Demo Mode • Example Nigerian Provisions"
+            if is_demo_file
+            else ("Example Data (Fallback)" if is_fallback else None)
         )
         combined_mode = (
             "curated_demo"
             if is_demo_file
-            else ("live" if not is_overall_mock else "auto (resilient fallback)")
+            else ("auto (fallback)" if is_fallback else "live")
         )
 
         logger.info(
             f"Verified process response contract: {len(recipes)} recipes, "
             f"{len(detected_items)} items, {len(shopping_list)} shopping items, "
-            f"is_demo={is_overall_mock}, mode='{combined_mode}'"
+            f"is_demo={is_demo_file}, is_fallback={is_fallback}, mode='{combined_mode}'"
         )
 
         return ProcessResponse(
             success=True,
-            is_demo=is_overall_mock,
+            is_demo=is_demo_file,
+            fallback_triggered=is_fallback,
+            fallback_reason="Live analysis failed; displaying example data." if is_fallback else None,
             demo_badge=badge,
             detected_items=detected_items,
             recipes=recipes,
@@ -308,12 +301,15 @@ async def update_recipes(
             city=payload.city or "Abuja",
         )
 
-        badge = "Demo Mode • Updated Recipes" if (payload.is_demo or is_recipe_mock) else None
-        combined_mode = "curated_demo" if payload.is_demo else ("live" if not is_recipe_mock else "auto (resilient fallback)")
+        is_fallback = bool(is_recipe_mock and not payload.is_demo)
+        badge = "Demo Mode • Example Nigerian Recipes" if payload.is_demo else ("Example Data (Fallback)" if is_fallback else None)
+        combined_mode = "curated_demo" if payload.is_demo else ("auto (fallback)" if is_fallback else "live")
 
         return ProcessResponse(
             success=True,
-            is_demo=payload.is_demo or is_recipe_mock,
+            is_demo=payload.is_demo,
+            fallback_triggered=is_fallback,
+            fallback_reason="Live recipe generation failed; displaying example recipes." if is_fallback else None,
             demo_badge=badge,
             detected_items=payload.detected_items,
             recipes=recipes,
