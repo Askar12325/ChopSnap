@@ -48,6 +48,7 @@ export function useChopSnapState() {
       else if (currentStep === "check") nextStep = "plan";
       else if (currentStep === "plan") nextStep = "cooking";
       else if (currentStep === "cooking") nextStep = "results";
+      else if (currentStep === "results") nextStep = "cook";
 
       if (typeof window !== "undefined") {
         const targetHash = nextStep === "welcome" ? "" : `#${nextStep}`;
@@ -66,7 +67,8 @@ export function useChopSnapState() {
   const goBack = useCallback(() => {
     setStep((currentStep) => {
       let prevStep: FlowStep = currentStep;
-      if (currentStep === "results") prevStep = "cooking";
+      if (currentStep === "cook") prevStep = "results";
+      else if (currentStep === "results") prevStep = "cooking";
       else if (currentStep === "cooking") prevStep = "plan";
       else if (currentStep === "plan") prevStep = "check";
       else if (currentStep === "check") prevStep = "snap";
@@ -89,7 +91,7 @@ export function useChopSnapState() {
   useEffect(() => {
     const handleHashChange = () => {
       const rawHash = window.location.hash.replace("#", "").toLowerCase() as FlowStep;
-      if (["snap", "check", "plan", "cooking", "results"].includes(rawHash)) {
+      if (["snap", "check", "plan", "cooking", "results", "cook"].includes(rawHash)) {
         setStep(rawHash);
       } else {
         setStep("welcome");
@@ -121,6 +123,10 @@ export function useChopSnapState() {
   const [activeTab, setActiveTab] = useState<"quick" | "proper" | "ingredients" | "shopping">("quick");
   // Financial tier filter: all, budget, comfortable
   const [tierFilter, setTierFilter] = useState<"all" | "budget" | "comfortable">("all");
+
+  // Results & Cook Mode state
+  const [activeCookingRecipeIndex, setActiveCookingRecipeIndex] = useState<number>(0);
+  const [currentRecipeCarouselIndex, setCurrentRecipeCarouselIndex] = useState<number>(0);
 
   // User culinary adjustments
   const [spiceLevel, setSpiceLevel] = useState<"Mild" | "Authentic Hot" | "Suya Extra">("Mild");
@@ -1201,6 +1207,17 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     setTimeout(() => setCopiedShoppingList(false), 2500);
   };
 
+  const handleStartCooking = useCallback((recipeIndex: number) => {
+    setActiveCookingRecipeIndex(recipeIndex);
+    setCurrentRecipeCarouselIndex(recipeIndex);
+    goTo("cook");
+  }, [goTo]);
+
+  const handleBackFromCooking = useCallback(() => {
+    setCurrentRecipeCarouselIndex(activeCookingRecipeIndex);
+    goTo("results");
+  }, [activeCookingRecipeIndex, goTo]);
+
   const resetAll = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -1214,6 +1231,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     setError(null);
     setBudgetNaira(null);
     setDietaryPreferences([]);
+    setActiveCookingRecipeIndex(0);
+    setCurrentRecipeCarouselIndex(0);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1459,6 +1478,12 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     handleSetBudget,
     dietaryPreferences,
     toggleDietaryPreference,
+    activeCookingRecipeIndex,
+    setActiveCookingRecipeIndex,
+    currentRecipeCarouselIndex,
+    setCurrentRecipeCarouselIndex,
+    handleStartCooking,
+    handleBackFromCooking,
 
     // Derived values
     looksClearItems,

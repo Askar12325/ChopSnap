@@ -1,4 +1,4 @@
-export type FlowStep = "welcome" | "snap" | "check" | "plan" | "cooking" | "results";
+export type FlowStep = "welcome" | "snap" | "check" | "plan" | "cooking" | "results" | "cook";
 
 export type SupportedCity = "Lagos" | "Abuja" | "Ibadan" | "Port Harcourt" | "Kano";
 export const SUPPORTED_CITIES: SupportedCity[] = ["Lagos", "Abuja", "Ibadan", "Port Harcourt", "Kano"];

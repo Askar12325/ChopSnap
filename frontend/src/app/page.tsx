@@ -17,6 +17,7 @@ import { ReviewScreen } from "../features/chopsnap/screens/ReviewScreen";
 import { PlanScreen } from "../features/chopsnap/screens/PlanScreen";
 import { LoadingScreen } from "../features/chopsnap/screens/LoadingScreen";
 import { ResultsScreen } from "../features/chopsnap/screens/ResultsScreen";
+import { CookModeScreen } from "../features/chopsnap/screens/CookModeScreen";
 
 export default function Home() {
   const state = useChopSnapState();
@@ -237,44 +238,60 @@ export default function Home() {
               <ResultsScreen
                 data={state.data}
                 loading={state.loading}
-                selectedFile={state.selectedFile}
-                previewUrl={state.previewUrl}
-                fileInputRef={state.fileInputRef}
                 selectedCity={state.selectedCity}
                 setSelectedCity={state.setSelectedCity}
                 activeTab={state.activeTab}
                 setActiveTab={state.setActiveTab}
                 tierFilter={state.tierFilter}
                 setTierFilter={state.setTierFilter}
-                handleUpdateRecipes={state.handleUpdateRecipes}
-                updatingRecipes={state.updatingRecipes}
                 quickRecipes={state.quickRecipes}
                 properRecipes={state.properRecipes}
                 displayedRecipes={state.displayedRecipes}
-                completedSteps={state.completedSteps}
-                toggleStep={state.toggleStep}
-                copiedRecipeIndex={state.copiedRecipeIndex}
-                handleCopyRecipe={state.handleCopyRecipe}
                 ingredientValueNaira={state.ingredientValueNaira}
                 hasSavingsData={state.hasSavingsData}
                 somePricesUnavailable={state.somePricesUnavailable}
-                showSavingsInfo={state.showSavingsInfo}
-                setShowSavingsInfo={state.setShowSavingsInfo}
                 usedUserIngredients={state.usedUserIngredients}
                 notUsedUserIngredients={state.notUsedUserIngredients}
                 totalUserIngredients={state.totalUserIngredients}
                 ingredientsUsedPercent={state.ingredientsUsedPercent}
-                newIngredientName={state.newIngredientName}
-                setNewIngredientName={state.setNewIngredientName}
-                newIngredientQty={state.newIngredientQty}
-                setNewIngredientQty={state.setNewIngredientQty}
-                handleAddIngredient={state.handleAddIngredient}
-                handleRemoveIngredient={state.handleRemoveIngredient}
                 checkedShoppingItems={state.checkedShoppingItems}
                 toggleShoppingItem={state.toggleShoppingItem}
                 copiedShoppingList={state.copiedShoppingList}
                 handleCopyShoppingList={state.handleCopyShoppingList}
                 budgetNaira={state.budgetNaira}
+                onStartCooking={state.handleStartCooking}
+                onStartOver={state.resetAll}
+                onChangePlan={() => state.goTo("plan")}
+                currentRecipeCarouselIndex={state.currentRecipeCarouselIndex}
+                setCurrentRecipeCarouselIndex={state.setCurrentRecipeCarouselIndex}
+              />
+            </m.div>
+          )}
+
+          {state.step === "cook" && (
+            <m.div
+              key="cook"
+              variants={screenVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={screenTransition}
+              className="w-full"
+            >
+              <CookModeScreen
+                recipe={
+                  state.displayedRecipes[state.activeCookingRecipeIndex] ||
+                  state.displayedRecipes[0] ||
+                  state.data?.recipes?.[0]
+                }
+                onBackToResults={state.handleBackFromCooking}
+                completedSteps={
+                  state.completedSteps[state.activeCookingRecipeIndex] ||
+                  new Set()
+                }
+                onToggleStep={(stepIdx) =>
+                  state.toggleStep(state.activeCookingRecipeIndex, stepIdx)
+                }
               />
             </m.div>
           )}
