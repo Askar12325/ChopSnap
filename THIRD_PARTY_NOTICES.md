@@ -11,7 +11,7 @@ ChopSnap relies on open-source software, typography, and open-weight AI models. 
 - **Model Identifier**: `meta-models/Muse-Spark-Open-816B-A42B` / `meta-models/muse-spark-open-1026`
 - **Serving Platform**: Hosted on serverless inference via [Baseten](https://baseten.co) (`https://inference.baseten.co/v1`)
 - **License**: [Muse Model License, Muse Spark Open](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md)
-- **Usage Policy**: [Exhibit A — Usage Policy](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md)
+- **Usage Policy**: [Exhibit A - Usage Policy](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md)
 - **Model Repository**: [https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B)
 - **Attribution Notice**: Built with Muse Spark Open.
 
