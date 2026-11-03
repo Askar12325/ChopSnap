@@ -41,3 +41,7 @@ backend/test_images/
 # OS files
 Thumbs.db
 .DS_Store
+scratch/
+test_*.js
+splash-*.png
+backend/test_images/
