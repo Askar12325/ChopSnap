@@ -445,6 +445,13 @@ export function CookModeScreen({
         </button>
       </div>
 
+      {/* AI Accuracy & Food Safety Notice */}
+      <div className="pb-3 text-center">
+        <p className="text-xs text-[var(--text-muted)] max-w-xl mx-auto leading-relaxed">
+          AI-generated suggestions can contain mistakes. Check ingredients, allergies and food safety yourself.
+        </p>
+      </div>
+
       {/* All Steps Drawer */}
       {showStepsDrawer && (
         <div

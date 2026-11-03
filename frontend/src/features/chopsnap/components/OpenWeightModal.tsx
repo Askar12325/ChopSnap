@@ -6,11 +6,13 @@ import { ShieldCheck, X, Coins, Lock, Cpu } from "lucide-react";
 export interface OpenWeightModalProps {
   showOpenWeightModal: boolean;
   setShowOpenWeightModal: (show: boolean) => void;
+  configuredRecipeModel?: string;
 }
 
 export function OpenWeightModal({
   showOpenWeightModal,
   setShowOpenWeightModal,
+  configuredRecipeModel,
 }: OpenWeightModalProps) {
   if (!showOpenWeightModal) return null;
 
@@ -47,6 +49,16 @@ export function OpenWeightModal({
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Prominent Model Attribution */}
+            <div className="p-3.5 rounded-xl bg-[var(--primary-subtle)] border border-[var(--primary-border)] flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+              <span className="text-sm font-bold text-[var(--primary-text)] tracking-wide">
+                Built with Muse Spark Open
+              </span>
+              <span className="text-xs font-medium text-[var(--text-secondary)]">
+                Model: {configuredRecipeModel || "Muse Spark Open"} (open-weight)
+              </span>
             </div>
 
             {/* 3 Concrete Pillars */}

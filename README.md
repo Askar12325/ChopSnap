@@ -2,6 +2,8 @@
 > **Meta Global AI Developer Hackathon 2026 — Indie Track**  
 > *ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.*
 
+**Built with Muse Spark Open**
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.5_(Turbopack)-black.svg?logo=next.js&logoColor=white)](https://nextjs.org)
 [![Muse Spark Open](https://img.shields.io/badge/Reasoning-Muse_Spark_Open_(Open--Weight)-0866FF.svg?logo=meta&logoColor=white)](https://ai.meta.com)
@@ -199,4 +201,11 @@ ChopSnap includes zero-cost **Snap + Speak** voice input powered by the Web Spee
 
 ## 📄 License
 
-MIT License. Developed for the **Meta Global AI Developer Hackathon (Indie Track)**.
+This project is licensed under the [MIT License](LICENSE) — Copyright (c) 2026 Umar Abubakar Sadiq. Developed for the **Meta Global AI Developer Hackathon (Indie Track)**.
+
+Models, fonts and libraries used by ChopSnap are covered by their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Muse Spark Open License & Compliance
+- **Built with Muse Spark Open**
+- The underlying AI model is Muse Spark Open, served through Baseten, used under the [Muse Model License](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md) and its [Usage Policy (Exhibit A)](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md).
+- ChopSnap is intended for adult users. Pidgin, Yoruba, Hausa and Igbo voice and text handling is experimental and not verified by the model's authors.

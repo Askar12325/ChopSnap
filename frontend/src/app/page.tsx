@@ -303,7 +303,10 @@ export default function Home() {
       </main>
 
       {/* Global Footer */}
-      <Footer />
+      <Footer
+        data={state.data}
+        configuredRecipeModel={state.configuredRecipeModel}
+      />
 
       {/* Global Open-Weight Dialog Modal */}
       <OpenWeightModal
