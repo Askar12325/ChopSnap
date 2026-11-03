@@ -7,12 +7,15 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     description="ChopSnap helps you cook Nigerian meals with the ingredients you already have, within your budget.",
     version="1.0.0",
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
+    openapi_url=None if settings.is_production else "/openapi.json",
 )
 
-# CORS setup for Next.js frontend
+# CORS setup: strictly allowed origins with no wildcards
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

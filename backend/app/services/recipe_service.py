@@ -76,7 +76,7 @@ Output Schema (return strictly valid JSON matching this schema):
 }}
 """
 
-MUSE_GLIMMER_SYSTEM_PROMPT = get_muse_system_prompt(3)
+MUSE_SYSTEM_PROMPT = get_muse_system_prompt(3)
 
 # NOTE: All demo recipes need review by an authentic Nigerian cook.
 # High-Fidelity Authentic Nigerian Culinary Recipe Collections (Classic first, 2-3 Quick + 2-3 Proper)
@@ -620,7 +620,7 @@ def apply_fuel_and_spice_adjustments(
 class RecipeService:
     """
     Culinary synthesis service utilizing Muse Spark Open
-    via vLLM, Ollama, or OpenAI-compatible inference with resilient mock fallback.
+    via OpenAI-compatible inference with resilient mock fallback.
     """
 
     async def generate_recipes(
@@ -648,7 +648,7 @@ class RecipeService:
 
         # Check in-memory recipe cache for repeated queries (live successes only)
         cache_key = hashlib.sha256(
-            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}_{budget_naira}_{servings}_{city}_{settings.MUSE_GLIMMER_MODEL_NAME}_low".encode()
+            f"{'|'.join(sorted(it.name.lower() for it in detected_items))}_{spice_level}_{cooking_fuel}_{recipe_count}_{budget_naira}_{servings}_{city}_{settings.RECIPE_MODEL}_low".encode()
         ).hexdigest()
         if cache_key in _RECIPE_CACHE:
             cached_recipes, cached_shopping, cached_mode = _RECIPE_CACHE[cache_key]
@@ -681,16 +681,10 @@ class RecipeService:
 
         # Attempt live inference with Muse Spark Open
         try:
-            if settings.MUSE_GLIMMER_PROVIDER == "ollama":
-                raw_recipes, shopping = await self._call_ollama_chat(
-                    item_summary, spice_level, cooking_fuel, recipe_count, budget_naira, servings, city
-                )
-                mode_str = f"live_ollama_{settings.MUSE_GLIMMER_MODEL_NAME}"
-            else:
-                raw_recipes, shopping = await self._call_openai_compatible(
-                    item_summary, spice_level, cooking_fuel, recipe_count, budget_naira, servings, city
-                )
-                mode_str = f"live_openai_{settings.MUSE_GLIMMER_MODEL_NAME}"
+            raw_recipes, shopping = await self._call_recipe_inference(
+                item_summary, spice_level, cooking_fuel, recipe_count, budget_naira, servings, city
+            )
+            mode_str = f"live_{settings.RECIPE_MODEL}"
 
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
             # Only cache successful live results
@@ -708,7 +702,7 @@ class RecipeService:
             adjusted_recipes = apply_fuel_and_spice_adjustments(raw_recipes, cooking_fuel, spice_level)
             return adjusted_recipes, shopping, f"fallback_mock (muse error: {type(e).__name__})", True
 
-    async def _call_openai_compatible(
+    async def _call_recipe_inference(
         self,
         item_summary: List[str],
         spice_level: str = "Mild",
@@ -718,7 +712,10 @@ class RecipeService:
         servings: int = 2,
         city: str = "Abuja",
     ) -> Tuple[List[Recipe], List[ShoppingItem]]:
-        """Calls vLLM, LMDeploy, or Ollama /v1 OpenAI-compatible endpoint with automatic single retry on truncation or parse error."""
+        """Calls OpenAI-compatible endpoint with automatic single retry on truncation or parse error."""
+        if not settings.AI_BASE_URL:
+            raise ValueError("AI_BASE_URL is not configured for recipe synthesis.")
+
         if budget_naira and budget_naira > 0:
             budget_clause = (
                 f"The household has about N{budget_naira:,} for {servings} people. "
@@ -743,11 +740,11 @@ class RecipeService:
             + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
         )
 
-        url = f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/chat/completions"
-        logger.info(f"Dispatching recipe synthesis to Muse Spark Open at {url} (model: {settings.MUSE_GLIMMER_MODEL_NAME}, count: {recipe_count})")
+        url = f"{settings.AI_BASE_URL.rstrip('/')}/chat/completions"
+        logger.info(f"Dispatching recipe synthesis to Muse Spark Open at {url} (model: {settings.RECIPE_MODEL}, count: {recipe_count})")
 
         payload = {
-            "model": settings.MUSE_GLIMMER_MODEL_NAME,
+            "model": settings.RECIPE_MODEL,
             "messages": [
                 {"role": "system", "content": get_muse_system_prompt(recipe_count)},
                 {"role": "user", "content": user_message}
@@ -759,13 +756,13 @@ class RecipeService:
         }
 
         headers = {}
-        if settings.MUSE_GLIMMER_API_KEY:
-            headers["Authorization"] = f"Bearer {settings.MUSE_GLIMMER_API_KEY}"
+        if settings.AI_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.AI_API_KEY}"
 
         last_error = None
         for attempt in range(2):
             try:
-                async with httpx.AsyncClient(timeout=settings.MUSE_GLIMMER_TIMEOUT_SECONDS) as client:
+                async with httpx.AsyncClient(timeout=settings.RECIPE_TIMEOUT_SECONDS) as client:
                     res = await client.post(url, json=payload, headers=headers)
                     res.raise_for_status()
                     data = res.json()
@@ -787,65 +784,6 @@ class RecipeService:
                 if attempt == 0:
                     continue
                 raise last_error
-
-    async def _call_ollama_chat(
-        self,
-        item_summary: List[str],
-        spice_level: str = "Mild",
-        cooking_fuel: str = "gas",
-        recipe_count: int = 3,
-        budget_naira: Optional[int] = None,
-        servings: int = 2,
-        city: str = "Abuja",
-    ) -> Tuple[List[Recipe], List[ShoppingItem]]:
-        """Calls native Ollama chat API."""
-        if budget_naira and budget_naira > 0:
-            budget_clause = (
-                f"The household has about N{budget_naira:,} for {servings} people. "
-                f"Design meals so that the cost of any ingredients the user must still buy stays within this budget, "
-                f"preferring what the user already has. If the budget is very low, prefer simple low-cost dishes. "
-                f"Never claim a recipe fits the budget; the app calculates that."
-            )
-        else:
-            budget_clause = (
-                f"The household has {servings} people in {city}. "
-                f"Design meals preferring what the user already has and keeping extra ingredients to buy minimal. "
-                f"Never claim a recipe fits the budget; the app calculates that."
-            )
-
-        user_message = (
-            f"Here are the provisions currently available in the kitchen:\n"
-            + "\n".join(item_summary)
-            + f"\n\nPreferences: Spice level = {spice_level}, Cooking Fuel = {cooking_fuel}, Market City = {city}.\n"
-            + f"{budget_clause}\n"
-            + f"Please formulate {recipe_count} authentic Nigerian recipes with at least one CLASSIC Nigerian dish FIRST, "
-            + f"including Quick Meals (<=20m) and Proper Cooking dishes, plus a minimal shopping list. "
-            + "Do not provide health, medical or nutrition advice, and do not include calorie or nutrient numbers."
-        )
-
-        url = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat"
-        logger.info(f"Dispatching recipe synthesis to Ollama Chat at {url} (model: {settings.MUSE_GLIMMER_MODEL_NAME})")
-
-        payload = {
-            "model": settings.MUSE_GLIMMER_MODEL_NAME,
-            "messages": [
-                {"role": "system", "content": get_muse_system_prompt(recipe_count)},
-                {"role": "user", "content": user_message}
-            ],
-            "stream": False,
-            "format": "json",
-            "options": {
-                "temperature": 0.5,
-                "num_predict": 1800,
-            }
-        }
-
-        async with httpx.AsyncClient(timeout=settings.MUSE_GLIMMER_TIMEOUT_SECONDS) as client:
-            res = await client.post(url, json=payload)
-            res.raise_for_status()
-            data = res.json()
-            raw_text = data["message"]["content"]
-            return self._parse_recipe_json(raw_text)
 
     def _parse_recipe_json(self, raw_text: str) -> Tuple[List[Recipe], List[ShoppingItem]]:
         """Multi-layer robust JSON parser extracting recipes and shopping list from Muse Spark Open output."""
@@ -934,11 +872,11 @@ class RecipeService:
         user_content = f"Spoken Transcript ({language}): \"{transcript}\""
 
         # Attempt live model call
-        if settings.INFERENCE_MODE != "mock":
+        if settings.INFERENCE_MODE != "mock" and settings.AI_BASE_URL:
             try:
-                url = f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/chat/completions"
+                url = f"{settings.AI_BASE_URL.rstrip('/')}/chat/completions"
                 payload = {
-                    "model": settings.MUSE_GLIMMER_MODEL_NAME,
+                    "model": settings.RECIPE_MODEL,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_content}
@@ -947,10 +885,10 @@ class RecipeService:
                     "response_format": {"type": "json_object"}
                 }
                 headers = {}
-                if settings.MUSE_GLIMMER_API_KEY:
-                    headers["Authorization"] = f"Bearer {settings.MUSE_GLIMMER_API_KEY}"
+                if settings.AI_API_KEY:
+                    headers["Authorization"] = f"Bearer {settings.AI_API_KEY}"
 
-                async with httpx.AsyncClient(timeout=settings.MUSE_GLIMMER_TIMEOUT_SECONDS) as client:
+                async with httpx.AsyncClient(timeout=settings.RECIPE_TIMEOUT_SECONDS) as client:
                     res = await client.post(url, json=payload, headers=headers)
                     res.raise_for_status()
                     data = res.json()

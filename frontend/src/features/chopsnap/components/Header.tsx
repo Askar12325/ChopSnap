@@ -9,6 +9,7 @@ export interface HeaderProps {
   resetAll: () => void;
   data: ProcessResponse | null;
   isBackendHealthy: boolean | null;
+  backendStatus?: "checking" | "waking_up" | "online" | "offline";
   isDark: boolean;
   toggleTheme: () => void;
   setShowOpenWeightModal: (show: boolean) => void;
@@ -18,6 +19,7 @@ export function Header({
   resetAll,
   data,
   isBackendHealthy,
+  backendStatus,
   isDark,
   toggleTheme,
   setShowOpenWeightModal,
@@ -58,12 +60,17 @@ export function Header({
                     <span className="font-semibold text-[var(--text-primary)]">Live Kitchen Analysis</span>
                   </>
                 )
-              ) : isBackendHealthy === true ? (
+              ) : backendStatus === "waking_up" ? (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#F9A826] animate-pulse" />
+                  <span className="font-semibold text-[#B36B00] dark:text-[#F9A826]">Waking up…</span>
+                </>
+              ) : isBackendHealthy === true || backendStatus === "online" ? (
                 <>
                   <span className="w-2.5 h-2.5 rounded-full bg-[#2E8B57] dark:bg-[#86EFAC]" />
                   <span className="font-semibold text-[var(--text-primary)]">AI Ready</span>
                 </>
-              ) : isBackendHealthy === false ? (
+              ) : isBackendHealthy === false || backendStatus === "offline" ? (
                 <>
                   <span className="w-2.5 h-2.5 rounded-full bg-[#1D2B64]" />
                   <span className="font-semibold text-[#A3173A] dark:text-[#F7A6B8]">Offline</span>

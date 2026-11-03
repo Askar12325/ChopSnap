@@ -1,11 +1,12 @@
 import logging
 import httpx
 from typing import Optional
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
+from fastapi import APIRouter, File, UploadFile, HTTPException, Query, Request, status
 from ..config import settings
 from ..models.schemas import ProcessResponse, UpdateRecipesRequest, VoiceInterpretRequest, VoiceInterpretResponse
 from ..services.vision_service import VisionService
 from ..services.recipe_service import RecipeService
+from ..core.rate_limit import check_ip_rate_limit, check_and_increment_daily_ai_cap
 
 logger = logging.getLogger(__name__)
 
@@ -13,29 +14,63 @@ router = APIRouter()
 vision_service = VisionService()
 recipe_service = RecipeService()
 
+def validate_image_upload(file_bytes: bytes, content_type: Optional[str]) -> None:
+    """Enforces 8MB file size limit and strict JPEG/PNG/WebP signature & content-type."""
+    if not file_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No photo provided. Please upload a clear photo of your kitchen or fridge.",
+        )
+
+    max_bytes = 8 * 1024 * 1024  # 8 MB
+    if len(file_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Photo exceeds the 8MB limit. Please upload a photo under 8MB.",
+        )
+
+    allowed_types = ("image/jpeg", "image/png", "image/webp")
+    if not content_type or content_type.lower() not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported format. Please upload a JPEG, PNG, or WebP photo.",
+        )
+
+    if len(file_bytes) < 12:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is too small or corrupted. Please try another photo.",
+        )
+
+    # Magic byte signatures
+    is_jpeg = file_bytes.startswith(b"\xff\xd8\xff")
+    is_png = file_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    is_webp = file_bytes.startswith(b"RIFF") and file_bytes[8:12] == b"WEBP"
+
+    if not (is_jpeg or is_png or is_webp):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The file content does not match a valid JPEG, PNG, or WebP image. Please upload an authentic photo.",
+        )
+
 @router.get("/health", tags=["System"])
 async def health_check():
     """
     System health check and live model connectivity diagnostics.
-    Tests reachability of Ollama and Muse Spark Open endpoints.
+    Tests reachability of the configured AI inference endpoint.
     """
-    ollama_reachable = False
-    muse_reachable = False
+    ai_reachable = False
 
-    async with httpx.AsyncClient(timeout=3.0) as client:
-        # Check Ollama
-        try:
-            res = await client.get(f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/tags")
-            ollama_reachable = res.status_code == 200
-        except Exception:
-            ollama_reachable = False
-
-        # Check Muse Spark Open endpoint
-        try:
-            res = await client.get(f"{settings.MUSE_GLIMMER_ENDPOINT.rstrip('/')}/models")
-            muse_reachable = res.status_code == 200
-        except Exception:
-            muse_reachable = False
+    if settings.AI_BASE_URL:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            try:
+                headers = {}
+                if settings.AI_API_KEY:
+                    headers["Authorization"] = f"Bearer {settings.AI_API_KEY}"
+                res = await client.get(f"{settings.AI_BASE_URL}/models", headers=headers)
+                ai_reachable = res.status_code == 200
+            except Exception:
+                ai_reachable = False
 
     return {
         "status": "healthy",
@@ -44,16 +79,14 @@ async def health_check():
         "fallback_to_mock_enabled": settings.FALLBACK_TO_MOCK,
         "configured_models": {
             "vision": {
-                "provider": settings.VISION_PROVIDER,
-                "model": settings.VISION_MODEL_NAME,
-                "endpoint": settings.VISION_ENDPOINT_OVERRIDE or settings.OLLAMA_BASE_URL,
-                "reachable": ollama_reachable,
+                "model": settings.VISION_MODEL,
+                "endpoint": settings.AI_BASE_URL,
+                "reachable": ai_reachable,
             },
             "recipe_reasoning": {
-                "provider": settings.MUSE_GLIMMER_PROVIDER,
-                "model": settings.MUSE_GLIMMER_MODEL_NAME,
-                "endpoint": settings.MUSE_GLIMMER_ENDPOINT,
-                "reachable": muse_reachable,
+                "model": settings.RECIPE_MODEL,
+                "endpoint": settings.AI_BASE_URL,
+                "reachable": ai_reachable,
                 "architecture": "Muse Spark Open Reasoning Model",
             },
         },
@@ -90,8 +123,8 @@ async def get_demo_recipes(
             recipes=[],
             shopping_list=[],
             model_metadata={
-                "vision_model": settings.VISION_MODEL_NAME,
-                "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                "vision_model": settings.VISION_MODEL,
+                "recipe_model": settings.RECIPE_MODEL,
                 "inference_mode": "curated_demo",
                 "is_demo_mode": True,
                 "demo_scenario": profile_label,
@@ -122,8 +155,8 @@ async def get_demo_recipes(
         recipes=recipes,
         shopping_list=shopping_list,
         model_metadata={
-            "vision_model": settings.VISION_MODEL_NAME,
-            "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+            "vision_model": settings.VISION_MODEL,
+            "recipe_model": settings.RECIPE_MODEL,
             "inference_mode": "curated_demo",
             "is_demo_mode": True,
             "demo_scenario": profile_label,
@@ -134,6 +167,7 @@ async def get_demo_recipes(
 
 @router.post("/process", response_model=ProcessResponse, tags=["Fridge Processing"])
 async def process_fridge_image(
+    request: Request,
     file: UploadFile = File(...),
     detect_only: bool = Query(default=False, description="Run vision detection only, returning items for review before recipes are generated"),
     demo: bool = Query(default=False, description="Explicitly trigger fast demo mode with curated data"),
@@ -150,12 +184,7 @@ async def process_fridge_image(
     4. Automatically falls back cleanly to high-fidelity mock data if local GPU is offline.
     5. If demo=true or file is a demo sample, responds instantly with curated verified data.
     """
-    # Validate content type
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Uploaded file '{file.filename}' is not an image (content-type: {file.content_type}).",
-        )
+    check_ip_rate_limit(request)
 
     try:
         # Explicit demo mode only from query parameter (no silent filename hijacking)
@@ -163,11 +192,10 @@ async def process_fridge_image(
         resolved_sample_type = sample_type if is_demo_file else None
 
         image_bytes = await file.read()
-        if not image_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uploaded file is empty.",
-            )
+
+        if not is_demo_file:
+            validate_image_upload(image_bytes, file.content_type)
+            check_and_increment_daily_ai_cap()
 
         logger.info(f"Processing provisions image: {file.filename} ({len(image_bytes)} bytes) [demo: {is_demo_file}]")
 
@@ -203,8 +231,8 @@ async def process_fridge_image(
                 recipes=[],
                 shopping_list=[],
                 model_metadata={
-                    "vision_model": settings.VISION_MODEL_NAME,
-                    "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                    "vision_model": settings.VISION_MODEL,
+                    "recipe_model": settings.RECIPE_MODEL,
                     "inference_mode": combined_mode,
                     "is_demo_mode": is_demo_file,
                     "vision_engine": vision_mode,
@@ -250,8 +278,8 @@ async def process_fridge_image(
             recipes=recipes,
             shopping_list=shopping_list,
             model_metadata={
-                "vision_model": settings.VISION_MODEL_NAME,
-                "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                "vision_model": settings.VISION_MODEL,
+                "recipe_model": settings.RECIPE_MODEL,
                 "inference_mode": combined_mode,
                 "is_demo_mode": is_overall_mock,
                 "vision_engine": vision_mode,
@@ -270,6 +298,7 @@ async def process_fridge_image(
 
 @router.post("/recipes/update", response_model=ProcessResponse, tags=["Recipe Synthesis"])
 async def update_recipes(
+    request: Request,
     payload: UpdateRecipesRequest,
     count: int = Query(default=3, description="Number of recipes to generate (default 3 for instant generation)"),
 ):
@@ -277,6 +306,10 @@ async def update_recipes(
     Regenerate recipes using the user's edited detected_items list as the single source of truth.
     Generates 3 recipes first for ultra-fast response, expandable in background.
     """
+    check_ip_rate_limit(request)
+    if not payload.is_demo:
+        check_and_increment_daily_ai_cap()
+
     try:
         if not payload.detected_items:
             raise HTTPException(
@@ -315,8 +348,8 @@ async def update_recipes(
             recipes=recipes,
             shopping_list=shopping_list,
             model_metadata={
-                "vision_model": settings.VISION_MODEL_NAME,
-                "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                "vision_model": settings.VISION_MODEL,
+                "recipe_model": settings.RECIPE_MODEL,
                 "inference_mode": combined_mode,
                 "is_demo_mode": payload.is_demo or is_recipe_mock,
                 "vision_engine": "User Confirmed Ingredients",
@@ -334,6 +367,7 @@ async def update_recipes(
 
 @router.post("/recipes/expand", response_model=ProcessResponse, tags=["Recipe Synthesis"])
 async def expand_recipes(
+    request: Request,
     payload: UpdateRecipesRequest,
     count: int = Query(default=2, description="Number of additional variation recipes to generate in background"),
 ):
@@ -341,6 +375,10 @@ async def expand_recipes(
     Background non-blocking endpoint:
     Synthesizes additional creative variation recipes to enrich the user's initial meal set.
     """
+    check_ip_rate_limit(request)
+    if not payload.is_demo:
+        check_and_increment_daily_ai_cap()
+
     try:
         if not payload.detected_items:
             return ProcessResponse(success=True, detected_items=[], recipes=[], shopping_list=[])
@@ -365,28 +403,22 @@ async def expand_recipes(
             recipes=recipes,
             shopping_list=shopping_list,
             model_metadata={
-                "vision_model": settings.VISION_MODEL_NAME,
-                "recipe_model": settings.MUSE_GLIMMER_MODEL_NAME,
+                "vision_model": settings.VISION_MODEL,
+                "recipe_model": settings.RECIPE_MODEL,
                 "inference_mode": "background_expansion",
                 "is_demo_mode": payload.is_demo or is_recipe_mock,
                 "vision_engine": "User Confirmed Ingredients",
                 "recipe_engine": recipe_mode,
             }
         )
-    except Exception as e:
-        logger.warning(f"Background recipe expansion failed non-critically: {e}")
-        return ProcessResponse(success=False, detected_items=payload.detected_items, recipes=[], shopping_list=[])
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Error updating recipes from edited ingredients")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Recipe update failed: {str(e)}",
-        )
+        logger.warning(f"Background recipe expansion failed non-critically: {e}")
+        return ProcessResponse(success=False, detected_items=payload.detected_items, recipes=[], shopping_list=[])
 
 @router.post("/voice/interpret", response_model=VoiceInterpretResponse, tags=["Voice Intelligence"])
-async def interpret_voice(payload: VoiceInterpretRequest):
+async def interpret_voice(request: Request, payload: VoiceInterpretRequest):
     """
     Interprets user spoken transcript via RECIPE_MODEL into structured culinary & budget parameters:
     - budget_naira
@@ -400,6 +432,7 @@ async def interpret_voice(payload: VoiceInterpretRequest):
     Explicitly supports Nigerian English, Nigerian Pidgin, Yoruba, Hausa, and Igbo.
     Missing fields are returned as null/empty list, never guessed.
     """
+    check_ip_rate_limit(request)
     clean_text = payload.transcript.strip()
     if not clean_text:
         return VoiceInterpretResponse(

@@ -17,6 +17,7 @@ import {
   PreviousVoiceState,
 } from "../types";
 import { CLIENT_DEMO_DATA } from "../data/samples";
+import { API_BASE_URL } from "@/config/api";
 
 async function resizeImageClientSide(file: File, maxDim = 1024): Promise<Blob> {
   return new Promise((resolve) => {
@@ -214,18 +215,23 @@ export function useChopSnapState() {
   const [progressStage, setProgressStage] = useState<number>(1);
 
   // Real Backend Health Check (/api/health) & Configured Model
+  const [backendStatus, setBackendStatus] = useState<"checking" | "waking_up" | "online" | "offline">("checking");
   const [isBackendHealthy, setIsBackendHealthy] = useState<boolean | null>(null);
   const [configuredRecipeModel, setConfiguredRecipeModel] = useState<string>("Muse Spark Open");
 
   useEffect(() => {
     let isMounted = true;
+    const startTime = Date.now();
+    let pollTimer: NodeJS.Timeout | null = null;
+
     const checkBackendHealth = async () => {
+      const elapsed = Date.now() - startTime;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await fetch(`${apiUrl}/api/health`, { method: "GET", cache: "no-store" });
+        const res = await fetch(`${API_BASE_URL}/api/health`, { method: "GET", cache: "no-store" });
         if (isMounted) {
           setIsBackendHealthy(res.ok);
           if (res.ok) {
+            setBackendStatus("online");
             const healthData = await res.json();
             const rawModel =
               healthData?.configured_models?.recipe_reasoning?.model ||
@@ -234,19 +240,29 @@ export function useChopSnapState() {
               const cleaned = rawModel.replace(/meta\/|:.*|\b30b\b/gi, "").replace(/-/g, " ").trim();
               setConfiguredRecipeModel(cleaned.toLowerCase().includes("muse") ? "Muse Spark Open" : (cleaned || "Muse Spark Open"));
             }
+          } else {
+            setBackendStatus(elapsed < 30000 ? "waking_up" : "offline");
           }
         }
       } catch {
         if (isMounted) {
           setIsBackendHealthy(false);
+          setBackendStatus(elapsed < 30000 ? "waking_up" : "offline");
         }
       }
+
+      // Schedule next check: poll every 4s during the first 30s, then fall back to slower 30s interval
+      if (isMounted) {
+        const nextInterval = Date.now() - startTime < 30000 ? 4000 : 30000;
+        pollTimer = setTimeout(checkBackendHealth, nextInterval);
+      }
     };
+
     checkBackendHealth();
-    const timer = setInterval(checkBackendHealth, 30000);
+
     return () => {
       isMounted = false;
-      clearInterval(timer);
+      if (pollTimer) clearTimeout(pollTimer);
     };
   }, []);
 
@@ -454,8 +470,7 @@ export function useChopSnapState() {
     });
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/voice/interpret`, {
+      const res = await fetch(`${API_BASE_URL}/api/voice/interpret`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -768,8 +783,7 @@ export function useChopSnapState() {
     }, 1500);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/recipes/update?count=3`, {
+      const res = await fetch(`${API_BASE_URL}/api/recipes/update?count=3`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -803,7 +817,7 @@ export function useChopSnapState() {
       scrollToResults();
 
       // Non-blocking background fetch for 2 additional variation recipes
-      fetch(`${apiUrl}/api/recipes/expand?count=2`, {
+      fetch(`${API_BASE_URL}/api/recipes/expand?count=2`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -841,7 +855,11 @@ export function useChopSnapState() {
       clearTimeout(tStage2);
       clearTimeout(tStage3);
       const message = err instanceof Error ? err.message : "Failed to generate recipes.";
-      setError(message);
+      setError(
+        message.includes("Failed to fetch") || message.includes("NetworkError") || message.includes("Load failed")
+          ? "We couldn't reach the kitchen server. Please try again."
+          : message
+      );
     } finally {
       setLoading(false);
       setStatusStep("");
@@ -855,9 +873,8 @@ export function useChopSnapState() {
     setStatusStep(`Scanning ${sampleType === "market" ? "Lagos Market" : sampleType === "pantry" ? "Pantry & Beans" : "Native Greens"} provisions...`);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(
-        `${apiUrl}/api/demo/${sampleType}?detect_only=true&spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
+        `${API_BASE_URL}/api/demo/${sampleType}?detect_only=true&spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
         { cache: "no-store" }
       );
       if (res.ok) {
@@ -1041,9 +1058,8 @@ export function useChopSnapState() {
           setStatusStep("Classifying clarity & one-tap alternatives…");
         }, 3500);
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
         const res = await fetch(
-          `${apiUrl}/api/process?detect_only=true&spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
+          `${API_BASE_URL}/api/process?detect_only=true&spice_level=${encodeURIComponent(spiceLevel)}&cooking_fuel=${encodeURIComponent(cookingFuel)}`,
           {
             method: "POST",
             body: formData,
@@ -1074,8 +1090,8 @@ export function useChopSnapState() {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "An unexpected network error occurred.";
         setError(
-          message.includes("Failed to fetch")
-            ? "FastAPI server unreachable at http://localhost:8000. Start backend with: uvicorn app.main:app --reload --port 8000"
+          message.includes("Failed to fetch") || message.includes("NetworkError") || message.includes("Load failed")
+            ? "We couldn't reach the kitchen server. Please try again."
             : message
         );
       } finally {
@@ -1139,14 +1155,13 @@ export function useChopSnapState() {
     setError(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const sampleType = selectedFile?.name?.includes("pantry")
         ? "pantry"
         : selectedFile?.name?.includes("native")
         ? "native"
         : "market";
 
-      const res = await fetch(`${apiUrl}/api/recipes/update`, {
+      const res = await fetch(`${API_BASE_URL}/api/recipes/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1453,6 +1468,8 @@ Zero-waste grocery additions for authentic Nigerian cooking.`;
     setPipelinePhase,
     progressStage,
     setProgressStage,
+    backendStatus,
+    setBackendStatus,
     isBackendHealthy,
     setIsBackendHealthy,
     configuredRecipeModel,

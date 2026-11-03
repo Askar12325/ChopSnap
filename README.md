@@ -107,8 +107,8 @@ Building for the **Indie Track**, relying solely on closed proprietary APIs crea
 
 - **Frontend**: Next.js 15 (Turbopack, App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons.
 - **Backend**: FastAPI, Python 3.11, Pydantic v2 (self-healing validation), Uvicorn, Pillow, Httpx.
-- **Reasoning AI**: Muse Spark Open (open-weight) via OpenAI-compatible endpoint or Ollama.
-- **Vision AI**: Open Vision-Language Model (Llama-3.2-Vision) via Ollama / vLLM.
+- **Reasoning AI**: Muse Spark Open (open-weight) via OpenAI-compatible endpoint.
+- **Vision AI**: Open Vision-Language Model via OpenAI-compatible endpoint.
 - **Fallback Engine**: Pre-calibrated high-fidelity Nigerian culinary dataset guaranteeing reliable demonstration.
 
 ---

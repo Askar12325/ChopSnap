@@ -87,8 +87,8 @@ MOCK_PROFILES = [
 
 class VisionService:
     """
-    Open Vision-Language Model service supporting LLaVA and Llama-3.2-Vision
-    via Ollama or OpenAI-compatible endpoints with high-resilience fallback.
+    Open Vision-Language Model service supporting authentic Nigerian food detection
+    via OpenAI-compatible endpoints with high-resilience fallback.
     """
 
     async def detect_ingredients(
@@ -109,7 +109,7 @@ class VisionService:
         # Check in-memory vision cache for repeated image analysis (live successes only)
         img_hash = (
             hashlib.sha256(
-                f"{hashlib.sha256(image_bytes).hexdigest()}_{settings.VISION_MODEL_NAME}_low".encode()
+                f"{hashlib.sha256(image_bytes).hexdigest()}_{settings.VISION_MODEL}_low".encode()
             ).hexdigest()
             if image_bytes
             else None
@@ -128,12 +128,8 @@ class VisionService:
 
         # Attempt live VLM inference
         try:
-            if settings.VISION_PROVIDER == "ollama":
-                items = await self._call_ollama_vision(b64_image)
-                mode_str = f"live_ollama_{settings.VISION_MODEL_NAME}"
-            else:
-                items = await self._call_openai_compatible_vision(b64_image)
-                mode_str = f"live_openai_{settings.VISION_MODEL_NAME}"
+            items = await self._call_vision_inference(b64_image)
+            mode_str = f"live_{settings.VISION_MODEL}"
 
             # Only cache successful live results
             if img_hash:
@@ -142,7 +138,7 @@ class VisionService:
             return items, mode_str, False
         except Exception as e:
             logger.warning(
-                f"Live vision inference failed with {settings.VISION_MODEL_NAME} ({type(e).__name__}: {e})."
+                f"Live vision inference failed with {settings.VISION_MODEL} ({type(e).__name__}: {e})."
             )
             if settings.INFERENCE_MODE == "live":
                 raise RuntimeError(f"Live vision inference failed: {e}") from e
@@ -170,37 +166,16 @@ class VisionService:
             logger.error(f"Image preprocessing failed: {e}")
             raise ValueError(f"Uploaded file is not a valid decodable image: {e}")
 
-    async def _call_ollama_vision(self, b64_image: str) -> List[DetectedItem]:
-        """Calls Ollama with open vision models such as LLaVA or Llama-3.2-Vision."""
-        endpoint = settings.VISION_ENDPOINT_OVERRIDE or f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/generate"
-        logger.info(f"Dispatching vision inference to Ollama at {endpoint} (model: {settings.VISION_MODEL_NAME})")
-
-        payload = {
-            "model": settings.VISION_MODEL_NAME,
-            "prompt": VISION_PROMPT,
-            "images": [b64_image],
-            "stream": False,
-            "options": {
-                "temperature": 0.2,
-                "num_predict": 3000,
-            }
-        }
-
-        async with httpx.AsyncClient(timeout=settings.VISION_TIMEOUT_SECONDS) as client:
-            res = await client.post(endpoint, json=payload)
-            res.raise_for_status()
-            data = res.json()
-            raw_text = data.get("response", "")
-            return self._parse_items_json(raw_text)
-
-    async def _call_openai_compatible_vision(self, b64_image: str) -> List[DetectedItem]:
+    async def _call_vision_inference(self, b64_image: str) -> List[DetectedItem]:
         """Calls an OpenAI-compatible vision endpoint with automatic single retry on truncation or parse error."""
-        base_url = settings.VISION_ENDPOINT_OVERRIDE or f"{settings.OLLAMA_BASE_URL.rstrip('/')}/v1"
-        url = f"{base_url.rstrip('/')}/chat/completions"
-        logger.info(f"Dispatching vision inference to OpenAI-compatible endpoint at {url} (model: {settings.VISION_MODEL_NAME})")
+        if not settings.AI_BASE_URL:
+            raise ValueError("AI_BASE_URL is not configured for vision inference.")
+
+        url = f"{settings.AI_BASE_URL.rstrip('/')}/chat/completions"
+        logger.info(f"Dispatching vision inference to AI endpoint at {url} (model: {settings.VISION_MODEL})")
 
         payload = {
-            "model": settings.VISION_MODEL_NAME,
+            "model": settings.VISION_MODEL,
             "messages": [
                 {
                     "role": "user",
@@ -219,8 +194,8 @@ class VisionService:
         }
 
         headers = {}
-        if settings.MUSE_GLIMMER_API_KEY:
-            headers["Authorization"] = f"Bearer {settings.MUSE_GLIMMER_API_KEY}"
+        if settings.AI_API_KEY:
+            headers["Authorization"] = f"Bearer {settings.AI_API_KEY}"
 
         last_error = None
         for attempt in range(2):
@@ -238,7 +213,7 @@ class VisionService:
                         if attempt == 0:
                             payload["max_completion_tokens"] = 3500
                             continue
-                        raise ValueError("Vision model response was cut off due to length limit.")
+                        raise ValueError("Vision inference response was cut off due to length limit.")
 
                     return self._parse_items_json(raw_text)
             except Exception as e:

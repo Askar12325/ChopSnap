@@ -47,6 +47,7 @@ export default function Home() {
         resetAll={state.resetAll}
         data={state.data}
         isBackendHealthy={state.isBackendHealthy}
+        backendStatus={state.backendStatus}
         isDark={state.isDark}
         toggleTheme={state.toggleTheme}
         setShowOpenWeightModal={state.setShowOpenWeightModal}
