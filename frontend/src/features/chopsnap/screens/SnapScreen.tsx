@@ -29,8 +29,8 @@ export interface SnapScreenProps {
   onTryExample?: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleDrop: (e: React.DragEvent) => void;
-  handleDragOver: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
+  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   previewUrl: string | null;
   selectedFile: File | null;
   voiceSupported: boolean;
@@ -68,6 +68,7 @@ export interface SnapScreenProps {
 export function SnapScreen({
   onBack,
   onContinue,
+  onTryExample,
   fileInputRef,
   handleFileChange,
   handleDrop,

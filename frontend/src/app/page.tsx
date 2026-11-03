@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { m, AnimatePresence, useReducedMotion } from "framer-motion";
+import { m, AnimatePresence, useReducedMotion, type Transition } from "framer-motion";
 import {
   AnkaraPatternDefs,
   AnkaraTopRibbon,
@@ -30,9 +30,9 @@ export default function Home() {
     exit: prefersReduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 },
   };
 
-  const screenTransition = prefersReduced
+  const screenTransition: Transition = prefersReduced
     ? { duration: 0 }
-    : { duration: 0.25, ease: [0.25, 0.1, 0.25, 1.0] };
+    : { duration: 0.25, ease: [0.25, 0.1, 0.25, 1.0] as const };
 
   return (
     <div className="min-h-screen bg-transparent text-[var(--text-primary)] flex flex-col justify-between selection:bg-[#1D2B64] selection:text-white overflow-x-hidden">

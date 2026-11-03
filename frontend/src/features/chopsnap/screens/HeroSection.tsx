@@ -49,7 +49,7 @@ export interface HeroSectionProps {
   handleUndoVoice: () => void;
   voiceMessage: string | null;
   preAnalysisItems: DetectedItem[];
-  handleRemovePreAnalysisItem: (name: string) => void;
+  handleRemovePreAnalysisItem: (idx: number) => void;
   typedIngredient: string;
   setTypedIngredient: (val: string) => void;
   handleAddPreAnalysisItem: (name: string) => void;
@@ -273,7 +273,7 @@ export function HeroSection({
                         </span>
                         <button
                           type="button"
-                          onClick={handleInterpretVoice}
+                          onClick={() => handleInterpretVoice()}
                           disabled={voiceInterpreting || !voiceTranscript.trim()}
                           className={`min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                             voiceInterpreting || !voiceTranscript.trim()
@@ -391,7 +391,7 @@ export function HeroSection({
                       <div className="flex items-center justify-end">
                         <button
                           type="button"
-                          onClick={handleInterpretVoice}
+                          onClick={() => handleInterpretVoice()}
                           disabled={voiceInterpreting || !voiceTranscript.trim()}
                           className="min-h-[44px] px-4 py-2 rounded-xl text-sm font-semibold bg-[#1D2B64] hover:bg-[#15204C] text-white flex items-center gap-2 active:scale-95 cursor-pointer"
                         >
