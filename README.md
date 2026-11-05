@@ -6,8 +6,8 @@ Built with Muse Spark Open
 
 ## Links
 
-- Live demo: [placeholder]
-- Demo video: [placeholder]
+- Live demo: https://chop-snap-ro2x.vercel.app/
+- Demo video: https://youtube.com/shorts/gcoDtaYOQYs?feature=share
 - Source: this repository
 
 ## Problem
